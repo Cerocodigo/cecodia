@@ -15,3 +15,4 @@ def empresa_activa(request):
 
     return relacion.empresa if relacion else None
 
+

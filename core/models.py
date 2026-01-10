@@ -15,6 +15,24 @@ class Empresa(models.Model):
         default="cerocodigo_modelos"
     )
 
+
+    sql_url = models.CharField(
+        max_length=500,
+        help_text="URI de sql para los datos del empresa"
+    )    
+    sql_user = models.CharField(
+        max_length=500,
+        help_text="URI de sql para los datos del empresa"
+    )
+    sql_clave = models.CharField(
+        max_length=500,
+        help_text="URI de sql para los datos del empresa"
+    )
+    sql_db = models.CharField(
+        max_length=100,
+        default="base de datos"
+    )
+
     activa = models.BooleanField(default=True)
     creada = models.DateTimeField(auto_now_add=True)
 
