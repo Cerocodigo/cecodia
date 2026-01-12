@@ -9,6 +9,13 @@ FIELD_TYPES = {
     "boolean": forms.BooleanField,
 }
 
+UI_FIELD_TYPES = {
+    "image": forms.ImageField,
+    "file": forms.FileField,
+}
+FK_FIELD_TYPES = {
+    "fk": forms.ModelChoiceField
+}
 def build_dynamic_form(campos):
     form_fields = {}
 
@@ -17,6 +24,14 @@ def build_dynamic_form(campos):
 
         nombre = campo.get("nombre")
         tipo = campo.get("tipo")
+        ui = campo.get("ui")
+        ui_widget = None
+
+        if isinstance(ui, dict):
+            ui_widget = ui.get("widget")
+        else:
+            ui_widget = ui
+
 
         # ❌ No mostrar PK
         if tipo == "pk":
@@ -34,6 +49,22 @@ def build_dynamic_form(campos):
                 required=requerido,
                 initial=defecto
             )
+            continue
+
+        # 🔽 UI FIELDS (PRIORIDAD)
+        if ui_widget in UI_FIELD_TYPES:
+            kwargs = {
+                "label": nombre.capitalize(),
+                "required": requerido,
+            }
+
+            if isinstance(ui, dict):
+                if "accept" in ui:
+                    kwargs["widget"] = forms.ClearableFileInput(
+                        attrs={"accept": ui["accept"]}
+                    )
+
+            form_fields[nombre] = UI_FIELD_TYPES[ui_widget](**kwargs)
             continue
 
         # 🔽 CAMPOS NORMALES
