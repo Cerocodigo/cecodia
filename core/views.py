@@ -14,7 +14,7 @@ from datetime import datetime
 
 from .forms import SignupForm
 from .models import Empresa, UsuarioEmpresa
-from .dynamic_form import build_dynamic_form
+from .dynamic_form import build_dynamic_form,  build_dynamic_formAdmin
 
 from core.utils import empresa_activa
 from motor.loader import obtener_modulos_empresa
@@ -125,25 +125,33 @@ def cargar_formulario_modulo(request, modulo):
     if modeloIA == None:
         FormClass = build_dynamic_form(Modelo['modelo']["campos"])
     else:
-        FormClass = build_dynamic_form(modeloIA["campos"])
+        FormClass = build_dynamic_formAdmin(modeloIA["campos"])
                 
     print("FormClass >>>", FormClass)
+    campos_activos = (
+        modeloIA["campos"]
+        if modeloIA else
+        Modelo['modelo']["campos"]
+    )
     if request.method == "POST":
         form = FormClass(request.POST)
-        if form.is_valid():
-            data = form.cleaned_data
-            data["_created"] = datetime.now()
-            data["_modulo"] = modulo
-            data["_empresa_id"] = str(empresa.id)
 
-            # 🔥 recomendado: colección por módulo
-            db[modulo].insert_one(data)
+        if form.is_valid():
+
+            # 🔹 guardar cambios del modelo IA (si existen)
+            if modeloIA:
+                db.modelos.update_one(
+                    {"_id": Modelo["_id"]},
+                    {"$set": {"modelo.campos": campos_activos}}
+                )
 
             return render(request, "modulos/formulario.html", {
                 "form": FormClass(),
                 "titulo": config["nombre"],
-                "success": True
+                "modulo": modulo,
+                "success": "estructura actualizada correctamente"
             })
+           
     else:
         form = FormClass()
 
@@ -267,3 +275,163 @@ def actualiazarBd(request, modulo):
 def get_mysql_columns(cursor, table_name):
     cursor.execute(f"SHOW COLUMNS FROM {table_name}")
     return {row[0]: row for row in cursor.fetchall()}
+
+
+
+@login_required
+def cargar_formulario_consulta(request, modulo, id):
+    empresa = empresa_activa(request)
+
+    if not empresa:
+        return render(request, "modulos/consulta.html", {
+            "error": "No hay empresa activa"
+        })
+
+    # 🔹 Mongo (estructura)
+    mongo = get_mongo_empresa(empresa)
+
+    config = mongo.modulos.find_one({"_id": modulo})
+    if not config:
+        return render(request, "modulos/consulta.html", {
+            "error": "Módulo no existe"
+        })
+
+    Modelo = mongo.modelos.find_one({"modulo": config["_id"]})
+    if not Modelo:
+        return render(request, "modulos/consulta.html", {
+            "error": "Modelo no existe"
+        })
+        
+    campos_activos = Modelo["modelo"]["campos"]
+    tablaNombre = Modelo["modelo"]["entidad"]["tabla"]
+    FormClass = build_dynamic_form(campos_activos)
+
+    # ======================
+    # 📌 POST
+    # ======================
+    if request.method == "POST":
+        form = FormClass(request.POST)
+
+        if form.is_valid():
+
+            columnas = []
+            valores = []
+
+            for campo in campos_activos:
+                nombre = campo["nombre"]
+                tipo = campo["tipo"]
+
+                if nombre not in form.cleaned_data:
+                    continue
+
+                valor = form.cleaned_data[nombre]
+
+                if valor in ("", None):
+                    continue
+
+                if tipo == "fk":
+                    valor = valor.id
+
+                if tipo == "boolean":
+                    valor = 1 if valor else 0
+
+                columnas.append(nombre)
+                valores.append(valor)
+
+            mysql = pymysql.connect(
+                host=empresa.sql_url,
+                user=empresa.sql_user,
+                password=empresa.sql_clave,
+                database=empresa.sql_db,
+                charset="utf8mb4",
+                autocommit=False
+            )
+            try:
+                cursor = mysql.cursor()
+
+                if id > 0:
+                    set_sql = ", ".join([f"{c}=%s" for c in columnas])
+                    sql = f"""
+                        UPDATE {tablaNombre}
+                        SET {set_sql}
+                        WHERE id = %s
+                    """
+                    valores.append(id)
+                else:
+                    campos_sql = ", ".join(columnas)
+                    placeholders = ", ".join(["%s"] * len(valores))
+                    sql = f"""
+                        INSERT INTO {tablaNombre}
+                        ({campos_sql})
+                        VALUES ({placeholders})
+                    """
+
+                cursor.execute(sql, valores)
+                mysql.commit()
+
+            except Exception as e:
+                mysql.rollback()
+                raise e
+
+            finally:
+                mysql.close()
+
+            return render(request, "modulos/consulta.html", {
+                "form": FormClass(),
+                "titulo": config["nombre"],
+                "modulo": modulo,
+                "success": "Registro guardado correctamente"
+            })
+    else:
+        if id >0:
+            # EDITAR / CONSULTAR REGISTRO EXISTENTE
+            mysql = pymysql.connect(
+                host=empresa.sql_url,
+                user=empresa.sql_user,
+                password=empresa.sql_clave,
+                database=empresa.sql_db,
+                cursorclass=pymysql.cursors.DictCursor
+            )
+
+            cursor = mysql.cursor()
+
+            sql = f"SELECT * FROM {tablaNombre} WHERE id = %s"
+            cursor.execute(sql, (id,))
+            registro = cursor.fetchone()
+
+            cursor.close()
+            mysql.close()
+
+            if not registro:
+                return render(request, "modulos/consulta.html", {
+                    "error": "Registro no encontrado",
+                    "titulo": config["nombre"],
+                    "modulo": modulo
+                })
+
+            # Preparar datos iniciales del formulario
+            initial_data = {}
+
+            for campo in campos_activos:
+                nombre = campo["nombre"]
+                tipo = campo["tipo"]
+
+                if nombre not in registro:
+                    continue
+
+                valor = registro[nombre]
+
+                # Ajustes por tipo
+                if tipo == "boolean":
+                    valor = bool(valor)
+
+                initial_data[nombre] = valor
+            form = FormClass(initial=initial_data)
+        else:
+            form = FormClass()
+  
+    return render(request, "modulos/consulta.html", {
+        "form": form,
+        "titulo": config["nombre"],
+        "modulo": modulo
+    })

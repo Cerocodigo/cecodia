@@ -16,3 +16,5 @@ class DBMySQL:
 
     def rollback(self):
         self.conn.rollback()
+
+
