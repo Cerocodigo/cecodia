@@ -31,30 +31,9 @@
 </head>
 <body>
 
-  <div class="card mt-3">
-    <div class="card-body">
-      <h5 class="card-title">Instrucción por texto</h5>
-  
-      <form method="get">
-        <div class="mb-3">
-          <input
-            type="text"
-            class="form-control"
-            name="prompt"
-            placeholder="Ej: agregar campo precio_unitario"
-            value="{{ request.GET.prompt|default:'' }}"
-          >
-        </div>
-  
-        <button type="submit" class="btn btn-primary">
-          Enviar instrucción
-        </button>
-      </form>
-  
-    </div>
-  </div>
 
-<form method="post" enctype="multipart/form-data" novalidate>
+
+<form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
     {% for field in form %}
