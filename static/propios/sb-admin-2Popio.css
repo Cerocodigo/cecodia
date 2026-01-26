@@ -1,0 +1,162 @@
+/* =====================================================
+   ERP FORM SYSTEM
+   Compatible con Bootstrap 5
+   ===================================================== */
+
+
+/* ============================
+   CONTENEDOR GENERAL DE CAMPO
+============================ */
+
+.form-group-erp {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+
+/* ============================
+   LABEL GENERAL
+============================ */
+
+.form-label-erp {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+
+/* ============================
+   INPUTS / SELECTS / TEXTAREA
+============================ */
+
+.form-control-erp {
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  background-color: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control-erp:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.12rem rgba(13, 110, 253, 0.15);
+  outline: none;
+}
+
+
+/* ============================
+   SELECT BOOTSTRAP BONITO
+============================ */
+
+.form-select.form-control-erp {
+  background-position: right 0.55rem center;
+  padding-right: 2rem;
+}
+
+
+/* ============================
+   INLINE FIELD
+   Label izquierda / Input derecha
+============================ */
+
+.field-inline {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Label izquierda */
+.field-inline-label {
+  flex: 0 0 45%;
+  text-align: left;
+  margin: 0;
+  padding-right: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #495057;
+  white-space: nowrap;
+}
+
+/* Dos puntos automáticos */
+.field-inline-label::after {
+  content: " :";
+}
+
+/* Input derecha */
+.field-inline .form-control,
+.field-inline .form-control-erp,
+.field-inline .form-select {
+  flex: 0 0 55%;
+}
+
+
+/* ============================
+   PANEL LATERAL (SIDE)
+============================ */
+
+.erp-side-panel {
+  background: #f8f9fa;
+  border-left: 1px solid #dee2e6;
+  padding: 12px;
+}
+
+
+/* ============================
+   TITULOS DE SECCION
+============================ */
+
+.erp-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+
+
+/* ============================
+   VALIDACIONES
+============================ */
+
+.form-control-erp.is-valid {
+  border-color: #198754;
+}
+
+.form-control-erp.is-invalid {
+  border-color: #dc3545;
+}
+
+.form-control-erp.is-invalid:focus {
+  box-shadow: 0 0 0 0.12rem rgba(220, 53, 69, 0.15);
+}
+
+
+/* ============================
+   RESPONSIVE
+============================ */
+
+@media (max-width: 768px) {
+  .field-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .field-inline-label {
+    text-align: left;
+    padding-bottom: 4px;
+  }
+
+  .field-inline-label::after {
+    content: "";
+  }
+
+  .field-inline .form-control,
+  .field-inline .form-control-erp,
+  .field-inline .form-select {
+    flex: 1;
+  }
+}

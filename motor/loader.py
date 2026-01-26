@@ -8,7 +8,9 @@ def obtener_modulos_empresa(empresa):
         modulos.append({
             "id": m["_id"],          # 👈 renombrado
             "nombre": m.get("nombre"),
-            "descripcion": m.get("descripcion", "")
+            "descripcion": m.get("descripcion", ""),
+            "uso": m.get("uso", "")
+
         })
 
     return modulos
