@@ -54,33 +54,95 @@
     </div>
   </div>
 
-<form method="post" enctype="multipart/form-data" novalidate>
+<!-- 🧠 FORMULARIO DE ESTRUCTURA -->
+<form method="post" >
     {% csrf_token %}
 
-    {% for field in form %}
-        <div class="form-group">
-            <label for="{{ field.id_for_label }}">
-                {{ field.label }}
-            </label>
+    <!-- 🧾 CABECERA -->
+    <h4>Cabecera</h4>
 
-            {{ field }}
+    <div class="row">
+        {% for field in form %}
+            <div class="col-md-3 mb-2">
+                <label class="form-label">
+                    {{ field.label }}
+                </label>
+                {{ field }}
+                {% if field.errors %}
+                    <div class="text-danger small">
+                        {{ field.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
 
-            {% if field.name == "imagen" %}
-                <img id="preview_{{ field.name }}" class="img-preview">
-            {% endif %}
 
-            {% if field.errors %}
-                <div style="color:red;">
-                    {{ field.errors }}
+    ---------------------------------------------------------
+    <!-- 📦 DETALLES -->
+    {% if formularios_detalle %}
+        <hr>
+        <h4>Detalles</h4>
+        {% for det in formularios_detalle %}
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                {{ det.entidad.tabla|upper }}
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        onclick="agregarFila('{{ forloop.counter0 }}')">
+                    ➕ Agregar fila
+                </button>
+            </div>
+        
+            <div class="card-body">
+                <div class="detalle-container" id="detalle-container-{{ forloop.counter0 }}">
+                    <!-- FILA BASE -->
+                    <div class="row detalle-row mb-2">
+                        {% for field in det.form %}
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
-            {% endif %}
+            </div>
         </div>
-    {% endfor %}
+        {% endfor %}
+      
+    {% endif %}
 
-    <button type="submit">Guardar</button>
+    <button type="submit" class="btn btn-primary">
+        Guardar estructura del módulo
+    </button>
 </form>
 
+
 <script>
+function agregarFila(index) {
+    const container = document.getElementById(`detalle-container-${index}`);
+    const filas = container.getElementsByClassName("detalle-row");
+
+    if (filas.length === 0) return;
+
+    // Clonar la primera fila
+    const nuevaFila = filas[0].cloneNode(true);
+
+    // Limpiar valores
+    const inputs = nuevaFila.querySelectorAll("input, select, textarea");
+    inputs.forEach(input => {
+        if (input.type === "checkbox" || input.type === "radio") {
+            input.checked = false;
+        } else {
+            input.value = "";
+        }
+    });
+
+    container.appendChild(nuevaFila);
+}
+
+
+
 document.addEventListener("DOMContentLoaded", function () {
 
     const input = document.getElementById("id_imagen");

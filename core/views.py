@@ -14,7 +14,10 @@ from datetime import datetime
 
 from .forms import SignupForm
 from .models import Empresa, UsuarioEmpresa
-from .dynamic_form import build_dynamic_form,  build_dynamic_formAdmin
+from .dynamic_form import build_dynamic_form
+
+from .datosCliente import *
+
 
 from core.utils import empresa_activa
 from motor.loader import obtener_modulos_empresa
@@ -39,7 +42,8 @@ def home(request):
 
     return render(request, "core/home.html", {
         "empresa": empresa,
-        "modulos": modulos
+        "modulos": modulos,
+        "usuario":request.user
     })
 
 
@@ -83,6 +87,149 @@ def signup(request):
 
     return render(request, 'core/signup.html', {'form': form})
 
+
+def pregarga_modulo(request, modulo):
+    empresa = empresa_activa(request)
+    if not empresa:
+        return({"estado":False, "msg":"empresa no existe"})
+
+    db = get_mongo_empresa(empresa)
+
+    #Modulo
+    modulo = db.modulos.find_one({"_id": modulo})
+
+    if not modulo:
+        return({"estado":False, "msg":"Módulo no existe"})
+    
+    #Modelo
+    #Modelos = list(db.modelos.find({"modulo": modulo['_id']}))
+    return {"estado":True, "empresa":empresa, "mongo":db, "modulo":modulo}
+
+
+
+@login_required
+def cargar_modulo_nuevo(request, modulo):
+    resultado = pregarga_modulo(request, modulo)
+    if resultado['estado'] == False:
+        return render(request, "modulos/moduloNuevo.html", {
+            "error":  resultado['msg']
+        })
+    
+    empresa = resultado["empresa"]
+    db =  resultado["mongo"]
+    modulo = resultado["modulo"]
+    
+    #Modelo
+    Modelos = list(db.modelos.find({"modulo": modulo['_id']}))
+
+    print("Modelos >>>", Modelos)
+
+    modelo_cab = None
+    modelos_det = []
+
+    for m in Modelos:
+        entidad = m["tabla"]
+        rol = m["rol"]
+
+        if rol == "cabecera":
+            modelo_cab = m
+        elif rol == "detalle":
+            modelos_det.append(m)
+
+    if not modelo_cab:
+        return render(request, "modulos/moduloMain.html", {
+            "error": "No existe entidad cabecera"
+        })
+
+    #filtro
+    if request.method == "POST":
+        pass
+    
+    if request.method == "GET":
+        FormCabecera = build_dynamic_form(modelo_cab["campos"], empresa)
+
+        FormsDetalle = []
+        for i, det in enumerate(modelos_det):
+            campos = det["campos"]
+            FormsDetalle.append({
+                "modelo_id": det["_id"],
+                "entidad": det["tabla"],
+                "form": build_dynamic_form(campos, empresa)
+            })
+
+        print("FormCabecera >>>", FormCabecera)
+        print("FormsDetalle >>>", FormsDetalle)
+
+
+
+        return render(request, "modulos/moduloNuevo.html", {
+            "form": FormCabecera(),
+            "formularios_detalle": [
+            {
+                "entidad": f["entidad"],
+                "form": f["form"]()
+            } for f in FormsDetalle
+        ],
+            "titulo": modulo["nombre"],
+            "modulo": modulo,
+            "success": "estructura actualizada correctamente",    
+            "empresa": empresa,
+            "usuario":request.user
+        })
+           
+
+@login_required
+def cargar_modulo_main(request, modulo):
+    resultado = pregarga_modulo(request, modulo)
+
+    if resultado['estado'] == False:
+        return render(request, "modulos/moduloMenu.html", {
+            "error":  resultado['msg']
+        })
+    empresa = resultado["empresa"]
+    db =  resultado["mongo"]
+    modulo = resultado["modulo"]
+    
+    #Modelo
+    Modelos = list(db.modelos.find({"modulo": modulo['_id']}))
+
+    print("Modelos >>>", Modelos)
+
+    modelo_cab = None
+    modelos_det = []
+
+    for m in Modelos:
+        entidad = m["tabla"]
+        rol = m["rol"]
+
+        if rol == "cabecera":
+            modelo_cab = m
+        elif rol == "detalle":
+            modelos_det.append(m)
+
+    if not modelo_cab:
+        return render(request, "modulos/moduloMain.html", {
+            "error": "No existe entidad cabecera"
+        })
+
+    #filtro
+    if request.method == "POST":
+        pass
+    
+    if request.method == "GET":
+        ListadoDatos = viewbasemodulo(modelo_cab, modulo, empresa )
+
+    # 🔹 GET
+    return render(request, "modulos/moduloMain.html", {
+        "titulo": modulo["nombre"],
+        "modulo": modulo,
+        "ListadoDatos": ListadoDatos,
+        "empresa": empresa,
+        "modulo_id":modulo['_id'],
+        "usuario":request.user
+    })
+
+
 @login_required
 def cargar_formulario_modulo(request, modulo):
     print("modulo >>>", modulo)
@@ -90,7 +237,7 @@ def cargar_formulario_modulo(request, modulo):
     print("empresa >>>", empresa)
 
     if not empresa:
-        return render(request, "modulos/formulario.html", {
+        return render(request, "modulos/moduloMenu.html", {
             "error": "No hay empresa activa"
         })
 
@@ -102,63 +249,100 @@ def cargar_formulario_modulo(request, modulo):
     print("config >>>", config)
 
     if not config:
-        return render(request, "modulos/formulario.html", {
+        return render(request, "modulos/moduloMenu.html", {
             "error": "Módulo no existe"
         })
     
     #Modelo
-    Modelo = db.modelos.find_one({"modulo": config['_id']})
-    print("Modelo >>>", Modelo)
+    #Modelo = db.modelos.find_one({"modulo": config['_id']})
+    Modelos = list(db.modelos.find({"modulo": config['_id']}))
 
-    if not Modelo:
-        return render(request, "modulos/formulario.html", {
-            "error": "Modelo no existe"
+    print("Modelos >>>", Modelos)
+
+    modelo_cab = None
+    modelos_det = []
+
+    for m in Modelos:
+        entidad = m["tabla"]
+        rol = m["rol"]
+
+        if rol == "cabecera":
+            modelo_cab = m
+        elif rol == "detalle":
+            modelos_det.append(m)
+
+    if not modelo_cab:
+        return render(request, "modulos/moduloMenu.html", {
+            "error": "No existe entidad cabecera"
         })
-    
+
+    modeloIA_cab = None
+    modelosIA_det = None   
+
     prompt = request.GET.get("prompt", "")
-    modeloIA = None
     if prompt:
         # 🔮 FUTURO: aquí se enviará a IA
-        modeloIA = interpretar_prompt(prompt, Modelo['modelo']["campos"])
-        print("modeloIA >>" , modeloIA)
+        modeloIA_cab = interpretar_prompt(prompt, modelo_cab["campos"])
+        print("modeloIA >>" , modeloIA_cab)
+        if modelosIA_det != None:
+            modelosIA_det = interpretar_prompt(prompt, modelos_det[0]["campos"])
+            print("modeloIA_cab >>" , modelosIA_det)
 
-    if modeloIA == None:
-        FormClass = build_dynamic_form(Modelo['modelo']["campos"])
-    else:
-        FormClass = build_dynamic_formAdmin(modeloIA["campos"])
-                
-    print("FormClass >>>", FormClass)
-    campos_activos = (
-        modeloIA["campos"]
-        if modeloIA else
-        Modelo['modelo']["campos"]
-    )
+    FormCabecera = build_dynamic_form(modeloIA_cab if modeloIA_cab else modelo_cab["campos"], empresa)
+
+    FormsDetalle = []
+    for i, det in enumerate(modelos_det):
+        campos = (modelosIA_det[i]["campos"] if prompt else det["campos"])
+        FormsDetalle.append({
+            "modelo_id": det["_id"],
+            "entidad": det["tabla"],
+            "form": build_dynamic_form(campos, empresa)
+        })
+
+    print("FormCabecera >>>", FormCabecera)
+    print("FormsDetalle >>>", FormsDetalle)
+
     if request.method == "POST":
-        form = FormClass(request.POST)
 
-        if form.is_valid():
+        if FormCabecera.is_valid():
 
             # 🔹 guardar cambios del modelo IA (si existen)
-            if modeloIA:
+            if modeloIA_cab:
                 db.modelos.update_one(
-                    {"_id": Modelo["_id"]},
-                    {"$set": {"modelo.campos": campos_activos}}
+                    {"_id": modelo_cab["_id"]},
+                    {"$set": {"modelo.campos": modeloIA_cab}}
+                )
+            if modelosIA_det:
+                db.modelos.update_one(
+                    {"_id": modelos_det["_id"]},
+                    {"$set": {"modelo.campos": modelosIA_det}}
                 )
 
             return render(request, "modulos/formulario.html", {
-                "form": FormClass(),
+                "form": FormCabecera(),
+                "formularios_detalle": [
+                {
+                    "entidad": f["entidad"],
+                    "form": f["form"]()
+                } for f in FormsDetalle
+            ],
                 "titulo": config["nombre"],
                 "modulo": modulo,
                 "success": "estructura actualizada correctamente"
             })
            
-    else:
-        form = FormClass()
 
+    # 🔹 GET
     return render(request, "modulos/formulario.html", {
-        "form": form,
         "titulo": config["nombre"],
-        "modulo": modulo
+        "modulo": modulo,
+        "form": FormCabecera(),
+        "formularios_detalle": [
+            {
+                "entidad": f["entidad"],
+                "form": f["form"]()
+            } for f in FormsDetalle
+        ]
     })
 
 
@@ -178,7 +362,8 @@ def actualiazarBd(request, modulo):
     print("db get_mongo_empresa >>>", db)
 
     #Modulo
-    config = db.modulos.find_one({"_id": modulo})
+    # 🔹 Configuración del módulo
+    config = db.modulos.find_one({"_id": modulo, "activo": True})
     print("config >>>", config)
 
     if not config:
@@ -187,81 +372,79 @@ def actualiazarBd(request, modulo):
         })
     
     #Modelo
-    Modelo = db.modelos.find_one({"modulo": config['_id']})
-    print("Modelo >>>", Modelo)
+    modelos = list(db.modelos.find({
+            "modulo": modulo,
+            "activo": True
+        }))
+    print(" modelos >>> " ,  modelos)
 
-    if not Modelo:
+    if not modelos:
         return render(request, "modulos/formulario.html", {
-            "error": "Modelo no existe"
+            "error": "No hay modelos definidos para el módulo"
+        })
+    cabecera = None
+    detalles = []
+
+    for m in modelos:
+        rol = m.get("rol")
+        if rol == "cabecera":
+            cabecera = m
+        elif rol == "detalle":
+            detalles.append(m)
+
+    if not cabecera:
+        return render(request, "modulos/formulario.html", {
+            "error": "El módulo no tiene entidad cabecera"
         })
 
+
+    # 🔹 Conexión MySQL / MariaDB
     mysql = pymysql.connect(
         host=empresa.sql_url,
         user=empresa.sql_user,
         password=empresa.sql_clave,
-        database=empresa.sql_db
+        database=empresa.sql_db,
+        autocommit=False
     )
-
-    """
-    mongo_db: conexión pymongo
-    mysql_conn: conexión MySQL/MariaDB
-    modulo: nombre del módulo (ej: 'items')
-    """
-
-    tabla_mongo = Modelo['modelo']["entidad"]['tabla']
-    print("tabla_mongo >>>", tabla_mongo)
-
-    campos_mongo = Modelo['modelo']["campos"]
-    print("campos_mongo >>>", campos_mongo)
 
     cursor = mysql.cursor()
 
-    # 🔹 2. Ver si la tabla existe
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM information_schema.tables
-        WHERE table_schema = DATABASE()
-        AND table_name = %s
-    """, (tabla_mongo,))
-    existe = cursor.fetchone()[0] == 1
-    print("existe >>>", existe)
+    try:
+        # =========================
+        # 🔹 SINCRONIZAR CABECERA
+        # =========================
+        print("sincro tabla")
+        tabla_cab = cabecera["tabla"]
+        campos_cab = cabecera["campos"]
 
-    # 🔹 3. Crear tabla si no existe
-    if not existe:
-        columnas = []
-        for campo in campos_mongo:
-            columnas.append(mongo_field_to_sql(campo))
+        print("🔷 Cabecera:", tabla_cab)
+        sincronizar_tabla(cursor, mysql, tabla_cab, campos_cab)
+        # =========================
+        # 🔹 SINCRONIZAR DETALLES
+        # =========================
+        for det in detalles:
+            tabla_det = det["tabla"]
+            campos_det = det["campos"]
 
-        sql = f"""
-            CREATE TABLE {tabla_mongo} (
-                {", ".join(columnas)}
-            ) ENGINE=InnoDB
-        """
-        print("sql >>>", sql)
+            print("🔷 Detalle:", tabla_det)
+            sincronizar_tabla(cursor, mysql, tabla_det, campos_det)
 
-        cursor.execute(sql)
         mysql.commit()
-        print(f"✅ Tabla creada: {tabla_mongo}")
-        return
+        print("✅ Base de datos sincronizada correctamente")
 
-    # 🔹 4. Comparar columnas
-    columnas_sql = get_mysql_columns(cursor, tabla_mongo)
-    print("columnas_sql >>>", columnas_sql)
+    except Exception as e:
+        mysql.rollback()
+        print("❌ Error:", str(e))
 
-    for campo in campos_mongo:
-        nombre = campo["nombre"]
+        return render(request, "modulos/formulario.html", {
+            "error": str(e)
+        })
 
-        # FK → nombre_id
-        if campo["tipo"] == "fk":
-            nombre = f"{nombre}_id"
+    finally:
+        cursor.close()
+        mysql.close()
 
-        if nombre not in columnas_sql:
-            sql_campo = mongo_field_to_sql({**campo, "nombre": nombre})
-            cursor.execute(f"ALTER TABLE {tabla_mongo} ADD COLUMN {sql_campo}")
-            print(f"➕ Columna agregada: {nombre}")
-
-    mysql.commit()
-    print(f"🔄 Tabla sincronizada: {tabla_mongo}")
+    # 🔹 Volver al home
     modulos = obtener_modulos_empresa(empresa)
 
     return render(request, "core/home.html", {
@@ -271,10 +454,60 @@ def actualiazarBd(request, modulo):
 
 
 
+def sincronizar_tabla(cursor, mysql, tabla, campos):
+    # 1. Ver si la tabla existe
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+        AND table_name = %s
+    """, (tabla,))
+    existe = cursor.fetchone()[0] == 1
+
+    # 2. Crear tabla
+    if not existe:
+        columnas = []
+        for campo in campos:
+            print("campo >>", campo, '  --  ' , mongo_field_to_sql(campo)  )
+            columnas.append(mongo_field_to_sql(campo))
+
+
+        sql = f"""
+            CREATE TABLE {tabla} (
+                {", ".join(columnas)}
+            ) ENGINE=InnoDB
+        """
+        print("sql >>>", sql)
+        cursor.execute(sql)
+        mysql.commit()
+        print(f"✅ Tabla creada: {tabla}")
+        return
+
+    # 3. Comparar columnas
+    columnas_sql = get_mysql_columns(cursor, tabla)
+
+    for campo in campos:
+        nombre = campo["nombre"]
+
+        if campo["tipo"] == "fk":
+            nombre = f"{nombre}_id"
+
+        if nombre not in columnas_sql:
+            sql_campo = mongo_field_to_sql({**campo, "nombre": nombre})
+            cursor.execute(
+                f"ALTER TABLE {tabla} ADD COLUMN {sql_campo}"
+            )
+            print(f"➕ Columna agregada: {tabla}.{nombre}")
+
+    mysql.commit()
+    print(f"🔄 Tabla sincronizada: {tabla}")
+
+
 
 def get_mysql_columns(cursor, table_name):
     cursor.execute(f"SHOW COLUMNS FROM {table_name}")
     return {row[0]: row for row in cursor.fetchall()}
+
 
 
 
@@ -304,7 +537,7 @@ def cargar_formulario_consulta(request, modulo, id):
         
     campos_activos = Modelo["modelo"]["campos"]
     tablaNombre = Modelo["modelo"]["entidad"]["tabla"]
-    FormClass = build_dynamic_form(campos_activos)
+    FormClass = build_dynamic_form(campos_activos, empresa)
 
     # ======================
     # 📌 POST

@@ -1,0 +1,1557 @@
+[{
+  "_id": "VentasFacturasDetalle",
+  "activo": true,
+  "tabla": "ventas_facturas_det",
+  "rol": "detalle",
+  "fk": "VentasFacturasId",
+  "campos": [
+    {
+      "nombre": "PkVentasFacturasDetalle",
+      "etiqueta": "ID Detalle",
+      "tipo_base": "int",
+      "tipo_funcional": "NumeroSecuencial",
+      "editable": false,
+      "requerido": true,
+      "configuracion": {
+        "inicio": 1,
+        "incremento": 1
+      },
+      "uso": {
+        "origen": "sistema",
+        "participa_en": [
+          "identidad"
+        ]
+      },
+      "orden": 10,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "VentasFacturasId",
+      "etiqueta": "Factura",
+      "tipo_base": "int",
+      "tipo_funcional": "Referencia",
+      "editable": false,
+      "requerido": true,
+      "configuracion": {
+        "entidad": "VentasFacturas",
+        "campo": "PkVentasFacturas"
+      },
+      "uso": {
+        "origen": "sistema",
+        "participa_en": [
+          "relacion"
+        ]
+      },
+      "orden": 20,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Item",
+      "etiqueta": "Item",
+      "tipo_base": "int",
+      "tipo_funcional": "Referencia",
+      "editable": true,
+      "requerido": true,
+      "configuracion": {
+        "sql": "SELECT id, codigo, nombre, descripcion, pvp, costo, TarifaIvaTarifa, TarifaIvaImpuestoCodigo, TarifaIvaPorcentajeCodigo, TarifaIvaPorcentaje FROM items WHERE activo = 1",
+        "value_field": "id",
+        "label_field": "nombre",
+        "busqueda_usuario": true
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "relacion"
+        ]
+      },
+      "orden": 30,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemCodigo",
+      "etiqueta": "Código",
+      "tipo_base": "string",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "codigo"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "documento"
+        ]
+      },
+      "orden": 40,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemNombre",
+      "etiqueta": "Nombre",
+      "tipo_base": "string",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "nombre"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "documento"
+        ]
+      },
+      "orden": 50,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemTarifaIva",
+      "etiqueta": "Tarifa IVA",
+      "tipo_base": "decimal",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "TarifaIvaTarifa"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 60,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemTarifaIvaImpuestoCodigo",
+      "etiqueta": "Tarifa IVA ImpuestoCodigo",
+      "tipo_base": "decimal",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "TarifaIvaImpuestoCodigo"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 70,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemTarifaIvaPorcentajeCodigo",
+      "etiqueta": "Tarifa IVA PorcentajeCodigo",
+      "tipo_base": "decimal",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "TarifaIvaPorcentajeCodigo"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 80,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemTarifaIvaPorcentaje",
+      "etiqueta": "Tarifa IVA Porcentaje",
+      "tipo_base": "decimal",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "TarifaIvaPorcentaje"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 90,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemPvp",
+      "etiqueta": "Precio Unitario",
+      "tipo_base": "decimal",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "pvp"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 100,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Cantidad",
+      "etiqueta": "Cantidad",
+      "tipo_base": "decimal",
+      "tipo_funcional": "NumeroSimple",
+      "editable": true,
+      "requerido": true,
+      "validacion": {
+        "decimales": 0,
+        "min": 1
+      },
+      "uso": {
+        "origen": "usuario",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 110,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Subtotal",
+      "etiqueta": "Subtotal",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "formula": "Cantidad * ItemPvp"
+      },
+      "uso": {
+        "origen": "calculado",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 120,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "DescuentoValor",
+      "etiqueta": "Descuento línea",
+      "tipo_base": "decimal",
+      "tipo_funcional": "NumeroSimple",
+      "editable": true,
+      "validacion": {
+        "decimales": 2,
+        "min": 0
+      },
+      "uso": {
+        "origen": "usuario",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 130,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "DescuentoGlobalLinea",
+      "etiqueta": "Descuento global línea",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "formula": "Subtotal * (DescuentoGlobalPorcentaje / 100)"
+      },
+      "uso": {
+        "origen": "calculado",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 140,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "TotalNeto",
+      "etiqueta": "Total Neto",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "formula": "Subtotal - DescuentoValor - DescuentoGlobalLinea"
+      },
+      "uso": {
+        "origen": "calculado",
+        "participa_en": [
+          "documento"
+        ]
+      },
+      "orden": 150,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Iva",
+      "etiqueta": "IVA",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "formula": "TotalNeto * ItemTarifaIva"
+      },
+      "uso": {
+        "origen": "calculado",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 160,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Total",
+      "etiqueta": "Total Línea",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "editable": false,
+      "validacion": {
+        "decimales": 2
+      },
+      "configuracion": {
+        "formula": "TotalNeto + Iva"
+      },
+      "uso": {
+        "origen": "calculado",
+        "participa_en": [
+          "documento"
+        ]
+      },
+      "orden": 170,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ItemCosto",
+      "etiqueta": "Costo Unitario",
+      "tipo_base": "decimal",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "validacion": {
+        "decimales": 4
+      },
+      "configuracion": {
+        "referencia": "Item",
+        "campo_origen": "costo"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "contable"
+        ]
+      },
+      "orden": 180,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "CostoTotal",
+      "etiqueta": "Costo Total",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "editable": false,
+      "validacion": {
+        "decimales": 4
+      },
+      "configuracion": {
+        "formula": "Cantidad * ItemCosto"
+      },
+      "uso": {
+        "origen": "calculado",
+        "participa_en": [
+          "contable"
+        ]
+      },
+      "orden": 190,
+      "col": 12,
+      "area": "main"
+    }
+  ],
+  "modulo": "VentasFacturas"
+},
+{
+  "_id": "SriTarifaIva",
+  "activo": true,
+  "pk": "SriTarifaIvaId",
+  "tabla": "sri_tarifa_iva",
+  "rol": "cabecera",
+  "campos": [
+    {
+      "nombre": "SriTarifaIvaId",
+      "tipo_base": "int",
+      "tipo_funcional": "NumeroSecuencial",
+      "editable": false,
+      "requerido": true,
+      "uso": {
+        "participa_en": [
+          "identidad"
+        ]
+      },
+      "orden": 10,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Tarifa",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "uso": {
+        "participa_en": [
+          "documento",
+          "busqueda"
+        ]
+      },
+      "orden": 20,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ImpuestoCodigo",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "configuracion": {
+        "valor_predeterminado": "2"
+      },
+      "uso": {
+        "participa_en": [
+          "tributario"
+        ]
+      },
+      "orden": 30,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "PorcentajeCodigo",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "uso": {
+        "participa_en": [
+          "tributario"
+        ]
+      },
+      "orden": 40,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Porcentaje",
+      "tipo_base": "decimal",
+      "tipo_funcional": "NumeroSimple",
+      "requerido": true,
+      "validacion": {
+        "decimales": 2,
+        "min": 0
+      },
+      "uso": {
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 50,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Activo",
+      "tipo_base": "boolean",
+      "tipo_funcional": "TextoSimple",
+      "configuracion": {
+        "valor_predeterminado": true
+      },
+      "orden": 60,
+      "col": 12,
+      "area": "main",
+      "gap_top": "0"
+    }
+  ],
+  "modulo": "SriTarifaIva"
+},
+{
+  "_id": "SriDocumentos",
+  "activo": true,
+  "pk": "Secuencial",
+  "tabla": "SriDocumentos",
+  "rol": "cabecera",
+  "campos": [
+    {
+      "nombre": "Secuencial",
+      "tipo_base": "int",
+      "tipo_funcional": "NumeroSecuencial",
+      "editable": false,
+      "requerido": true,
+      "orden": 10,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Nombre",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "orden": 20,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Establecimiento",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "orden": 30,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "PuntoEmision",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "orden": 40,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Numero",
+      "tipo_base": "int",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "orden": 50,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Direccion",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "orden": 60,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "CodigoSriAts",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "orden": 70,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "CodigoSriElectronico",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "orden": 80,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Activo",
+      "tipo_base": "boolean",
+      "tipo_funcional": "TextoSimple",
+      "configuracion": {
+        "valor_predeterminado": true
+      },
+      "orden": 90,
+      "col": 12,
+      "area": "main",
+      "gap_top": "0"
+    }
+  ],
+  "modulo": "SriDocumentos"
+},
+{
+  "_id": "Items",
+  "activo": true,
+  "pk": "ItemId",
+  "tabla": "items",
+  "rol": "cabecera",
+  "campos": [
+    {
+      "nombre": "ItemId",
+      "tipo_base": "int",
+      "tipo_funcional": "NumeroSecuencial",
+      "editable": false,
+      "requerido": true,
+      "orden": 10,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Codigo",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "uso": {
+        "participa_en": [
+          "busqueda"
+        ]
+      },
+      "orden": 20,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Nombre",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "orden": 30,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Descripcion",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "orden": 40,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Unidad",
+      "tipo_base": "string",
+      "tipo_funcional": "OpcionMultiple",
+      "configuracion": {
+        "opciones": [
+          "UND",
+          "KG",
+          "LT",
+          "SERV"
+        ]
+      },
+      "orden": 50,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Pvp",
+      "tipo_base": "decimal",
+      "tipo_funcional": "NumeroSimple",
+      "validacion": {
+        "decimales": 2
+      },
+      "orden": 60,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Costo",
+      "tipo_base": "decimal",
+      "tipo_funcional": "NumeroSimple",
+      "validacion": {
+        "decimales": 4
+      },
+      "orden": 70,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "TarifaIva",
+      "tipo_base": "string",
+      "tipo_funcional": "Referencia",
+      "requerido": true,
+      "configuracion": {
+        "sql": "SELECT SriTarifaIvaId AS id, Tarifa, ImpuestoCodigo, PorcentajeCodigo, Porcentaje FROM SriTarifaIva WHERE Activo = 1",
+        "value_field": "id",
+        "label_field": "Tarifa"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "calculo",
+          "tributario",
+          "documento"
+        ]
+      },
+      "orden": 80,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "TarifaIvaImpuestoCodigo",
+      "etiqueta": "Código Impuesto",
+      "tipo_base": "string",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "configuracion": {
+        "referencia": "TarifaIva",
+        "campo_origen": "ImpuestoCodigo"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "tributario"
+        ]
+      },
+      "orden": 90,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "TarifaIvaPorcentajeCodigo",
+      "etiqueta": "Código Porcentaje",
+      "tipo_base": "string",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "configuracion": {
+        "referencia": "TarifaIva",
+        "campo_origen": "PorcentajeCodigo"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "tributario"
+        ]
+      },
+      "orden": 100,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "TarifaIvaPorcentaje",
+      "etiqueta": "Porcentaje IVA",
+      "tipo_base": "decimal",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "editable": false,
+      "configuracion": {
+        "referencia": "TarifaIva",
+        "campo_origen": "Porcentaje"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "calculo"
+        ]
+      },
+      "orden": 110,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Activo",
+      "tipo_base": "boolean",
+      "tipo_funcional": "TextoSimple",
+      "configuracion": {
+        "valor_predeterminado": true
+      },
+      "orden": 120,
+      "col": 12,
+      "area": "main",
+      "gap_top": "0"
+    }
+  ],
+  "modulo": "items"
+},
+{
+  "_id": "VentasFacturas",
+  "activo": true,
+  "tabla": "ventas_facturas",
+  "rol": "cabecera",
+  "pk": "PkVentasFacturas",
+  "campos": [
+    {
+      "nombre": "PkVentasFacturas",
+      "tipo_base": "int",
+      "tipo_funcional": "NumeroSecuencial",
+      "editable": false,
+      "requerido": true,
+      "uso": {
+        "origen": "sistema",
+        "participa_en": [
+          "identidad"
+        ]
+      },
+      "orden": 10,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Secuencial",
+      "tipo_base": "int",
+      "tipo_funcional": "NumeroSecuencial",
+      "editable": false,
+      "requerido": true,
+      "configuracion": {
+        "por": "Establecimiento"
+      },
+      "uso": {
+        "origen": "sistema",
+        "participa_en": [
+          "documento"
+        ]
+      },
+      "orden": 20,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "FechaSistema",
+      "tipo_base": "datetime",
+      "tipo_funcional": "SistemaFecha",
+      "editable": false,
+      "requerido": true,
+      "uso": {
+        "origen": "sistema",
+        "participa_en": [
+          "auditoria"
+        ]
+      },
+      "orden": 30,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Usuario",
+      "tipo_base": "string",
+      "tipo_funcional": "SistemaUsuario",
+      "editable": false,
+      "requerido": true,
+      "uso": {
+        "origen": "sistema",
+        "participa_en": [
+          "auditoria"
+        ]
+      },
+      "orden": 40,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Estado",
+      "tipo_base": "string",
+      "tipo_funcional": "OpcionMultiple",
+      "configuracion": {
+        "opciones": [
+          "BORRADOR",
+          "EMITIDA",
+          "ANULADA"
+        ],
+        "valor_predeterminado": "BORRADOR"
+      },
+      "uso": {
+        "origen": "sistema",
+        "participa_en": [
+          "control"
+        ]
+      },
+      "orden": 50,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "FechaEmision",
+      "tipo_base": "date",
+      "tipo_funcional": "Fecha",
+      "requerido": true,
+      "uso": {
+        "origen": "usuario",
+        "participa_en": [
+          "documento"
+        ]
+      },
+      "orden": 60,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumento",
+      "tipo_base": "int",
+      "tipo_funcional": "Referencia",
+      "configuracion": {
+        "sql": "SELECT nombre, establecimiento, punto_emision, numero, direccion, codigo_electronico, codigo_ats FROM SriDocumentos WHERE activo = 1 and tipo = 'Factura'",
+        "value_field": "id",
+        "label_field": "nombre"
+      },
+      "uso": {
+        "origen": "referencia",
+        "participa_en": [
+          "relacion"
+        ]
+      },
+      "orden": 70,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumentoEstablecimiento",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "SriDocumento",
+        "campo_origen": "establecimiento"
+      },
+      "orden": 80,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumentoPuntoEmision",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "SriDocumento",
+        "campo_origen": "punto_emision"
+      },
+      "orden": 90,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumentoNumero",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "SriDocumento",
+        "campo_origen": "numero"
+      },
+      "orden": 100,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumentoDireccion",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "SriDocumento",
+        "campo_origen": "direccion"
+      },
+      "orden": 110,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumentoCompleto",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "EstablecimientoEstablecimiento + '-' + EstablecimientoPuntoEmision + '-' + EstablecimientoNumero"
+      },
+      "orden": 120,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumentoCodigoSriAts",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "SriDocumento",
+        "campo_origen": "codigo_ats"
+      },
+      "orden": 130,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SriDocumentoCodigoSriElectronico",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "SriDocumento",
+        "campo_origen": "codigo_electronico"
+      },
+      "orden": 140,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ActivoFijo",
+      "tipo_base": "boolean",
+      "tipo_funcional": "OpcionMultiple",
+      "configuracion": {
+        "opciones": [
+          "Si",
+          "No"
+        ],
+        "labels": {
+          "true": "Si",
+          "false": "No"
+        },
+        "valor_predeterminado": "No"
+      },
+      "orden": 150,
+      "col": 12,
+      "area": "main",
+      "gap_top": "0"
+    },
+    {
+      "nombre": "Cliente",
+      "tipo_base": "int",
+      "tipo_funcional": "Referencia",
+      "configuracion": {
+        "sql": "SELECT id, ruc, razon_social, email, direccion, telefono, TipoAts, TipoElectronico FROM clientes WHERE activo = 1",
+        "label_field": "id"
+      },
+      "orden": 160,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ClienteId",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "Cliente",
+        "campo_origen": "ruc"
+      },
+      "orden": 170,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ClienteRazonSocial",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "Cliente",
+        "campo_origen": "razon_social"
+      },
+      "orden": 180,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ClienteEmail",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "Cliente",
+        "campo_origen": "email"
+      },
+      "orden": 190,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ClienteDireccion",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "Cliente",
+        "campo_origen": "direccion"
+      },
+      "orden": 200,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ClienteTelefono",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "Cliente",
+        "campo_origen": "telefono"
+      },
+      "orden": 210,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ClienteTipoAts",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "Cliente",
+        "campo_origen": "TipoAts"
+      },
+      "orden": 220,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "ClienteTipoElectronico",
+      "tipo_funcional": "ReferenciaAdjunto",
+      "configuracion": {
+        "referencia": "Cliente",
+        "campo_origen": "TipoElectronico"
+      },
+      "orden": 230,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SumaSinDescuentos",
+      "tipo_base": "decimal",
+      "tipo_funcional": "FormulaDetalle",
+      "configuracion": {
+        "operacion": "SUM",
+        "campo": "Subtotal"
+      },
+      "orden": 240,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "DescuentosDetalle",
+      "tipo_base": "decimal",
+      "tipo_funcional": "FormulaDetalle",
+      "configuracion": {
+        "operacion": "SUM",
+        "campo": "DescuentoValor"
+      },
+      "orden": 250,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "SumaConDescuentos",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "SumaSinDescuentos - DescuentosDetalle"
+      },
+      "orden": 260,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Base0",
+      "tipo_base": "decimal",
+      "tipo_funcional": "FormulaDetalle",
+      "configuracion": {
+        "operacion": "SUM",
+        "campo": "Total",
+        "condicion": "ItemTarifaIva == 0"
+      },
+      "orden": 270,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "BaseIva",
+      "tipo_base": "decimal",
+      "tipo_funcional": "FormulaDetalle",
+      "configuracion": {
+        "operacion": "SUM",
+        "campo": "Total",
+        "condicion": "ItemTarifaIva > 0"
+      },
+      "orden": 280,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "BaseExenta",
+      "tipo_base": "decimal",
+      "tipo_funcional": "FormulaDetalle",
+      "configuracion": {
+        "operacion": "SUM",
+        "campo": "Total",
+        "condicion": "ItemTarifaIva == -1"
+      },
+      "orden": 290,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "DescuentoPorcentaje",
+      "tipo_base": "decimal",
+      "tipo_funcional": "NumeroSimple",
+      "validacion": {
+        "decimales": 2,
+        "min": 0,
+        "max": 100
+      },
+      "orden": 300,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Base0Desc",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "Base0 * (DescuentoPorcentaje / 100)"
+      },
+      "orden": 310,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "BaseIvaDesc",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "BaseIva * (DescuentoPorcentaje / 100)"
+      },
+      "orden": 320,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "BaseExentaDesc",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "BaseExenta * (DescuentoPorcentaje / 100)"
+      },
+      "orden": 330,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Base0Neta",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "Base0 - Base0Desc"
+      },
+      "orden": 340,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "BaseIvaNeta",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "BaseIva - BaseIvaDesc"
+      },
+      "orden": 350,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "BaseExentaNeta",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "BaseExenta - BaseExentaDesc"
+      },
+      "orden": 360,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Subtotal",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "Base0Neta + BaseIvaNeta + BaseExentaNeta"
+      },
+      "orden": 370,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Iva",
+      "tipo_base": "decimal",
+      "tipo_funcional": "FormulaDetalle",
+      "configuracion": {
+        "operacion": "SUM",
+        "campo": "Iva"
+      },
+      "orden": 380,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Total",
+      "tipo_base": "decimal",
+      "tipo_funcional": "Operacion",
+      "configuracion": {
+        "formula": "Subtotal - DescuentoTotal + Iva"
+      },
+      "orden": 390,
+      "col": 12,
+      "area": "main"
+    },
+    {
+      "nombre": "Costo",
+      "tipo_base": "decimal",
+      "tipo_funcional": "FormulaDetalle",
+      "configuracion": {
+        "operacion": "SUM",
+        "campo": "CostoTotal"
+      },
+      "orden": 400,
+      "col": 12,
+      "area": "main"
+    }
+  ],
+  "modulo": "VentasFacturas"
+},
+{
+  "_id": "Clientes",
+  "activo": true,
+  "tabla": "clientes",
+  "rol": "cabecera",
+  "pk": "ClienteId",
+  "campos": [
+    {
+      "nombre": "ClienteId",
+      "tipo_base": "int",
+      "tipo_funcional": "NumeroSecuencial",
+      "editable": false,
+      "requerido": true,
+      "uso": {
+        "participa_en": [
+          "identidad"
+        ]
+      },
+      "gap": 10,
+      "area": "main"
+    },
+    {
+      "nombre": "Ruc",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "uso": {
+        "participa_en": [
+          "documento",
+          "busqueda"
+        ]
+      },
+      "gap": 10,
+      "area": "main"
+    },
+    {
+      "nombre": "RazonSocial",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "requerido": true,
+      "uso": {
+        "participa_en": [
+          "documento",
+          "busqueda"
+        ]
+      },
+      "gap": 10,
+      "area": "main"
+    },
+    {
+      "nombre": "Email",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "break": true,
+      "gap": 10,
+      "area": "main"
+    },
+    {
+      "nombre": "Direccion",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "gap": 10,
+      "area": "main"
+    },
+    {
+      "nombre": "Telefono",
+      "tipo_base": "string",
+      "tipo_funcional": "TextoSimple",
+      "gap": 10,
+      "area": "main"
+    },
+    {
+      "nombre": "FormaPago",
+      "tipo_base": "string",
+      "tipo_funcional": "OpcionMultiple",
+      "configuracion": {
+        "opciones": [
+          "CONTADO",
+          "CREDITO"
+        ]
+      },
+      "gap": 10,
+      "area": "side"
+    },
+    {
+      "nombre": "TipoIdentificacion",
+      "etiqueta": "Tipo de Identificación",
+      "tipo_base": "string",
+      "tipo_funcional": "OpcionMultiple",
+      "requerido": true,
+      "configuracion": {
+        "opciones": [
+          "CEDULA",
+          "PASAPORTE",
+          "RUC",
+          "CONSUMIDOR_FINAL"
+        ],
+        "labels": {
+          "CEDULA": "Cédula",
+          "PASAPORTE": "Pasaporte",
+          "RUC": "RUC",
+          "CONSUMIDOR_FINAL": "Consumidor Final"
+        },
+        "valor_predeterminado": "CEDULA"
+      },
+      "uso": {
+        "origen": "usuario",
+        "participa_en": [
+          "documento",
+          "tributario",
+          "ats"
+        ]
+      },
+      "gap": 10,
+      "area": "side"
+    },
+    {
+      "nombre": "TipoIdentificacionCodigo",
+      "etiqueta": "Código Tipo Identificación SRI",
+      "tipo_base": "string",
+      "tipo_funcional": "Operacion",
+      "editable": false,
+      "configuracion": {
+        "condicional": [
+          {
+            "si": "TipoIdentificacion == 'CEDULA'",
+            "entonces": "05"
+          },
+          {
+            "si": "TipoIdentificacion == 'PASAPORTE'",
+            "entonces": "06"
+          },
+          {
+            "si": "TipoIdentificacion == 'RUC'",
+            "entonces": "04"
+          },
+          {
+            "si": "TipoIdentificacion == 'CONSUMIDOR_FINAL'",
+            "entonces": "07"
+          }
+        ]
+      },
+      "uso": {
+        "origen": "calculado",
+        "participa_en": [
+          "tributario",
+          "ats",
+          "documento"
+        ]
+      },
+      "gap": 10,
+      "area": "main"
+    },
+    {
+      "nombre": "Relacionado",
+      "etiqueta": "Relacionado",
+      "tipo_base": "boolean",
+      "tipo_funcional": "OpcionMultiple",
+      "configuracion": {
+        "opciones": [
+          "Si",
+          "No"
+        ],
+        "labels": {
+          "true": "Si",
+          "false": "No"
+        },
+        "valor_predeterminado": "No"
+      },
+      "uso": {
+        "origen": "usuario",
+        "participa_en": [
+          "tributario",
+          "documento"
+        ]
+      },
+      "gap": 10,
+      "area": "side"
+    },
+    {
+      "nombre": "TipoCliente",
+      "etiqueta": "Tipo de Cliente",
+      "tipo_base": "string",
+      "tipo_funcional": "OpcionMultiple",
+      "requerido": true,
+      "configuracion": {
+        "opciones": [
+          "01",
+          "02"
+        ],
+        "labels": {
+          "01": "Persona Natural",
+          "02": "Sociedad"
+        },
+        "valor_predeterminado": "02"
+      },
+      "uso": {
+        "origen": "usuario",
+        "participa_en": [
+          "tributario",
+          "ats",
+          "documento"
+        ]
+      },
+      "gap": 10,
+      "area": "side"
+    },
+    {
+      "nombre": "Estado",
+      "etiqueta": "Estado del Cliente",
+      "tipo_base": "string",
+      "tipo_funcional": "OpcionMultiple",
+      "requerido": true,
+      "configuracion": {
+        "opciones": [
+          "Valido",
+          "Anulado"
+        ],
+        "labels": {
+          "PERSONA_NATURAL": "Valido",
+          "SOCIEDAD": "Anulado"
+        },
+        "valor_predeterminado": "Valido"
+      },
+      "uso": {
+        "origen": "usuario",
+        "participa_en": [
+          "tributario",
+          "ats",
+          "documento"
+        ]
+      },
+      "gap": 10,
+      "area": "side"
+    }
+  ],
+  "modulo": "clientes"
+}]

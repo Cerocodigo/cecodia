@@ -9,7 +9,7 @@ def interpretar_prompt(prompt, campos_actuales):
     """
     prompt: str (ej: 'agregar campo precio_unitario decimal obligatorio')
     campos_actuales: list[dict] (estructura actual del modelo)
-    return: list[dict] (estructura ajustada)
+    return: list{dict} (estructura ajustada)
     """
 
     system_prompt = """

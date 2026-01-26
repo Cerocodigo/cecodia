@@ -1,0 +1,114 @@
+[{
+  "_id": "clientes",
+  "nombre": "Clientes",
+  "uso": "alto",
+  "activo": true,
+  "descripcion": "Gestión de clientes",
+  "entidades": [
+    "Clientes"
+  ],
+  "creado_en": {
+    "$date": "2026-01-07T21:42:26.086Z"
+  },
+  "prompt_config": {
+    "enabled": true,
+    "label": "Instrucciones de configuración",
+    "descripcion": "Describe cambios estructurales o de proceso para este módulo"
+  }
+},
+{
+  "_id": "items",
+  "nombre": "Ítems",
+  "uso": "medio",
+  "activo": true,
+  "descripcion": "Productos y servicios",
+  "entidades": [
+    "Items"
+  ],
+  "creado_en": {
+    "$date": "2026-01-07T21:42:52.510Z"
+  },
+  "prompt_config": {
+    "enabled": true,
+    "label": "Instrucciones de configuración",
+    "descripcion": "Describe cambios estructurales o de proceso para este módulo"
+  }
+},
+{
+  "_id": "ventasFacturas",
+  "nombre": "Facturación",
+  "activo": true,
+  "uso": "alto",
+  "descripcion": "Facturación de ventas",
+  "entidades": [
+    "ventasFacturas",
+    "ventasFacturasDet"
+  ],
+  "creado_en": "2026-01-07T21:43:25.975Z",
+  "prompt_config": {
+    "enabled": true,
+    "label": "Instrucciones de configuración",
+    "descripcion": "Reglas del proceso de facturación de ventas",
+    "prompt": [
+      "Este módulo corresponde al proceso completo de facturación de ventas.",
+      "El proceso de facturación se compone de una cabecera de factura y uno o más detalles.",
+      "La entidad factura_venta representa la cabecera del documento.",
+      "La entidad factura_venta_det representa las líneas de detalle de la factura.",
+      "El usuario debe seleccionar un cliente existente del módulo clientes.",
+      "El usuario debe seleccionar items existentes del módulo items.",
+      "Cada item tiene asociada una tarifa de IVA proveniente del módulo IVA.",
+      "El sistema debe calcular automáticamente todos los valores monetarios.",
+      "No se debe pedir al usuario que ingrese manualmente subtotales, IVA ni totales.",
+      "Cálculo por detalle:",
+      "- Subtotal = cantidad * precio_unitario.",
+      "- IVA de línea = subtotal * tarifa de IVA.",
+      "- Total de línea = subtotal + IVA.",
+      "Clasificación de subtotales en la cabecera:",
+      "- Si la tarifa de IVA es 0%, acumular en subtotal_iva_0.",
+      "- Si el item es exento de IVA, acumular en subtotal_iva_exento.",
+      "- Si la tarifa de IVA es mayor a 0, acumular en subtotal_iva_gravado.",
+      "El valor total del IVA debe ser la suma del IVA de todas las líneas.",
+      "El total de la factura debe ser la suma de todos los subtotales más el IVA.",
+      "La cabecera debe recalcularse automáticamente cuando se agregue, modifique o elimine un detalle.",
+      "El estado inicial de la factura debe ser BORRADOR.",
+      "Solo facturas en estado EMITIDA se consideran definitivas.",
+      "Facturas ANULADAS no deben afectar reportes ni totales."
+    ]
+  }
+},
+{
+  "_id": "SriDocumentos",
+  "nombre": "SriDocumentos",
+  "uso": "bajo",
+  "activo": true,
+  "descripcion": "SriDocumentos habilitados",
+  "entidades": [
+    "SriDocumentos"
+  ],
+  "creado_en": {
+    "$date": "2026-01-07T21:42:52.510Z"
+  },
+  "prompt_config": {
+    "enabled": true,
+    "label": "Instrucciones de configuración",
+    "descripcion": "Describe cambios estructurales o de proceso para este módulo"
+  }
+},
+{
+  "_id": "SriTarifasIva",
+  "nombre": "Tarifas IVA",
+  "uso": "bajo",
+  "activo": true,
+  "descripcion": "Configuración de impuestos",
+  "entidades": [
+    "SriTarifasIva"
+  ],
+  "creado_en": {
+    "$date": "2026-01-07T21:47:20.524Z"
+  },
+  "prompt_config": {
+    "enabled": true,
+    "label": "Instrucciones de configuración",
+    "descripcion": "Describe cambios estructurales o de proceso para este módulo"
+  }
+}]
