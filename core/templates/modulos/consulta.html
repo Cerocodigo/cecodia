@@ -56,7 +56,9 @@
         </div>
     {% endfor %}
 
-    <button type="submit">Guardar</button>
+    <button type="submit" name="accion" value="guardar">Guardar</button>
+    <button type="submit" name="accion" value="eliminar"
+    onclick="return confirm('¿Eliminar registro?')">Eliminar</button>
 </form>
 
 <script>

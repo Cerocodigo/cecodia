@@ -1,5 +1,6 @@
 from django import forms
-from django.forms import widgets
+from django.forms import widgets, Select
+
 
 BASE_FIELD_TYPES  = {
     "string": forms.CharField,
@@ -63,19 +64,26 @@ def build_dynamic_form(campos, empresa):
             "SistemaUsuario",
             "Operacion",
             "FormulaDetalle",
-            "ReferenciaAdjunto",
         ):
             continue
+
+        # attrs base
+        widget_attrs = {
+            "id": f"id_{nombre}",
+            "class": "form-control",
+            "data-col": col,
+            "data-gap": gap,
+            "data-gap-top": gap_top,
+            "data-break": "1" if break_line else "0",
+            "data_area": area,
+        }
+
 
         # 🔽 OPCIÓN MÚLTIPLE
         if tipo_funcional == "OpcionMultiple":
             opciones = configuracion.get("opciones", [])
             labels = configuracion.get("labels", {})
             choices = [(op, labels.get(op, op)) for op in opciones]
-            print("opciones>> ",opciones)
-            print("labels>> ",labels)
-
-            print("choices>> ",choices)
             
 
             form_fields[nombre] = forms.ChoiceField(
@@ -97,22 +105,77 @@ def build_dynamic_form(campos, empresa):
 
         # 🔽 REFERENCIA
         if tipo_funcional == "Referencia":
-            opciones = obtener_opciones_sql(empresa, campo)
+            opciones = obtener_opciones_sql(empresa, configuracion)
+
+            choices = opciones[0]
+            extra_data = opciones[1]
+
+            widget_attrs.update({
+                "class": "form-select form-control-erp",
+                "style": "width: 100%",
+                "data-ref-source": nombre,
+            })
+
+            print("DEBUG opciones:", opciones)
+            print("DEBUG tipo primer elemento:", type(opciones[0]))
 
             form_fields[nombre] = forms.ChoiceField(
                 label=etiqueta,
-                choices=opciones,
                 required=requerido,
-                widget=forms.Select(attrs={
-                    "class": "form-select",
-                    "data-col": col,
-                    "data-gap": gap,
-                    "data-gap-top": gap_top,
-                    "data-break": "1" if break_line else "0",
-                    "data_area": area,
-                })
+                choices=choices,
+                widget=SelectWithData(
+                    attrs=widget_attrs,
+                    extra_data=extra_data
+                )
             )
+
             continue
+
+        # ====================================================
+        # 📎 REFERENCIA ADJUNTO (INPUT AUTO)
+        # ====================================================
+        if tipo_funcional == "ReferenciaAdjunto":
+
+            ref = configuracion.get("referencia")          # TarifaIva
+            campo_origen = configuracion.get("campo_origen")  # Porcentaje
+
+
+            widget_attrs.update({
+                "readonly": "readonly",
+                "data-ref-from": f"id_{ref}",               # 🔑
+                "data-ref-key": campo_origen.lower(),        # 🔑
+            })
+
+            form_fields[nombre] = forms.CharField(
+                label=etiqueta,
+                required=False,
+                widget=forms.TextInput(attrs=widget_attrs)
+            )
+
+
+            field_class = BASE_FIELD_TYPES.get(tipo_base, forms.CharField)
+
+            kwargs = {
+                "label": etiqueta,
+                "required": False,
+                "widget": field_class.widget(attrs=widget_attrs)
+            }
+
+            if tipo_base == "decimal":
+                kwargs["decimal_places"] = validacion.get("decimales", 2)
+                kwargs["max_digits"] = 18
+
+            if tipo_base == "int":
+                kwargs["min_value"] = validacion.get("min")
+                kwargs["max_value"] = validacion.get("max")
+
+            if tipo_base == "string":
+                kwargs["max_length"] = 255
+
+            form_fields[nombre] = field_class(**kwargs)
+            continue
+
+
 
         # 🔽 CAMPOS NORMALES
         field_class = BASE_FIELD_TYPES.get(tipo_base)
@@ -163,16 +226,15 @@ def build_dynamic_form(campos, empresa):
             kwargs["max_length"] = 255
 
         form_fields[nombre] = field_class(**kwargs)
+        print("nombre >>>" , nombre)
+        print("form_fields >>>" , form_fields[nombre])
 
     return type("DynamicForm", (forms.Form,), form_fields)
 
 
 import pymysql
 
-
 def obtener_opciones_sql(empresa, campo):
-
-    
     mysql = pymysql.connect(
         host=empresa.sql_url,
         user=empresa.sql_user,
@@ -180,8 +242,7 @@ def obtener_opciones_sql(empresa, campo):
         database=empresa.sql_db,
         charset="utf8mb4",
         autocommit=False,
-        cursorclass=pymysql.cursors.DictCursor  # 🔑 CLAVE
-
+        cursorclass=pymysql.cursors.DictCursor
     )
 
     sql = campo.get("sql")
@@ -189,12 +250,45 @@ def obtener_opciones_sql(empresa, campo):
     label_field = campo.get("label_field")
 
     with mysql.cursor() as cursor:
-            cursor.execute(sql)
-            rows = cursor.fetchall() 
+        cursor.execute(sql)
+        rows = cursor.fetchall()
 
     mysql.close()
 
-    return [
-        (row[value_field], row[label_field])
-        for row in rows
-    ]
+    choices = []
+    data_map = {}
+
+    for row in rows:
+        value = row[value_field]
+        label = row[label_field]
+
+        choices.append((value, label))
+
+        extra = {}
+        for k, v in row.items():
+            if k in (value_field, label_field):
+                continue
+            extra[k] = v
+
+        data_map[value] = extra
+
+    return choices, data_map
+
+
+class SelectWithData(Select):
+    def __init__(self, *args, extra_data=None, **kwargs):
+        self.extra_data = extra_data or {}
+        super().__init__(*args, **kwargs)
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+
+        if value in self.extra_data:
+            for k, v in self.extra_data[value].items():
+                option["attrs"][f"data-{k.lower()}"] = v
+
+        return option
