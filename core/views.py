@@ -8,7 +8,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import transaction, connection
+from django.urls import reverse
 
 from datetime import datetime
 
@@ -89,7 +90,10 @@ def signup(request):
 
 
 def pregarga_modulo(request, modulo):
+
     empresa = empresa_activa(request)
+    
+    print("empresa >>>", empresa)
     if not empresa:
         return({"estado":False, "msg":"empresa no existe"})
 
@@ -114,15 +118,14 @@ def cargar_modulo_nuevo(request, modulo):
         return render(request, "modulos/moduloNuevo.html", {
             "error":  resultado['msg']
         })
-    
+
     empresa = resultado["empresa"]
+
     db =  resultado["mongo"]
     modulo = resultado["modulo"]
     
     #Modelo
     Modelos = list(db.modelos.find({"modulo": modulo['_id']}))
-
-    print("Modelos >>>", Modelos)
 
     modelo_cab = None
     modelos_det = []
@@ -143,7 +146,105 @@ def cargar_modulo_nuevo(request, modulo):
 
     #filtro
     if request.method == "POST":
-        pass
+        # === CABECERA ===
+        FormCabecera = build_dynamic_form(modelo_cab["campos"], empresa)
+        form_cab = FormCabecera(request.POST)
+
+        # === DETALLES ===
+        forms_detalle = []
+        for det in modelos_det:
+            FormDet = build_dynamic_form(det["campos"], empresa)
+            form_det = FormDet(request.POST, prefix=str(det["_id"]))
+            forms_detalle.append({
+                "modelo": det,
+                "form": form_det
+            })
+
+        # === VALIDACIÓN GENERAL ===
+        if not form_cab.is_valid() or any(not f["form"].is_valid() for f in forms_detalle):
+            return render(request, "modulos/moduloNuevo.html", {
+                "form": form_cab,
+                "formularios_detalle": [
+                    {
+                        "entidad": f["modelo"]["tabla"],
+                        "form": f["form"]
+                    } for f in forms_detalle
+                ],
+                "titulo": modulo["nombre"],
+                "modulo": modulo,
+                "empresa": empresa,
+                "usuario": request.user,
+                "error": "Corrige los errores del formulario"
+            })
+
+        # ================= TRANSACCIÓN MYSQL =================
+        mysql = pymysql.connect(
+            host=empresa.sql_url,
+            user=empresa.sql_user,
+            password=empresa.sql_clave,
+            database=empresa.sql_db,
+            autocommit=False
+        )
+
+        cursor = mysql.cursor()
+        try:
+            # ========= CABECERA =========
+            campos = []
+            valores = []
+
+            for k, v in form_cab.cleaned_data.items():
+                campos.append(k)
+                valores.append(v)
+
+            sql = f"""
+                INSERT INTO {modelo_cab['tabla']}
+                ({','.join(campos)})
+                VALUES ({','.join(['%s'] * len(valores))})
+            """
+
+            cursor.execute(sql, valores)
+            idregistro = cursor.lastrowid
+
+            # ========= DETALLES =========
+            for f in forms_detalle:
+                modelo_det = f["modelo"]
+                fk_field = modelo_det["fk"]
+
+                campos = []
+                valores = []
+
+                for k, v in f["form"].cleaned_data.items():
+                    campos.append(k)
+                    valores.append(v)
+
+                campos.append(fk_field)
+                valores.append(idregistro)
+
+                sql = f"""
+                    INSERT INTO {modelo_det['tabla']}
+                    ({','.join(campos)})
+                    VALUES ({','.join(['%s'] * len(valores))})
+                """
+
+                cursor.execute(sql, valores)
+
+            # ✅ TODO OK
+            mysql.commit()
+
+        except Exception as e:
+            mysql.rollback()
+            raise e
+
+        finally:
+            cursor.close()
+            mysql.close()
+
+        # ========= REDIRECCIÓN =========
+        return redirect(
+            "modulo_form",
+            modulo=modulo["_id"],
+            id=idregistro
+        )
     
     if request.method == "GET":
         FormCabecera = build_dynamic_form(modelo_cab["campos"], empresa)
@@ -156,10 +257,6 @@ def cargar_modulo_nuevo(request, modulo):
                 "entidad": det["tabla"],
                 "form": build_dynamic_form(campos, empresa)
             })
-
-        print("FormCabecera >>>", FormCabecera)
-        print("FormsDetalle >>>", FormsDetalle)
-
 
 
         return render(request, "modulos/moduloNuevo.html", {
@@ -174,7 +271,10 @@ def cargar_modulo_nuevo(request, modulo):
             "modulo": modulo,
             "success": "estructura actualizada correctamente",    
             "empresa": empresa,
-            "usuario":request.user
+            "usuario":request.user,
+            "moduloId": modulo['_id'],
+
+            
         })
            
 
@@ -348,35 +448,25 @@ def cargar_formulario_modulo(request, modulo):
 
 @login_required
 def actualiazarBd(request, modulo):
+    print(" modulo >>> " ,  modulo)
 
-    print("modulo >>>", modulo)
-    empresa = empresa_activa(request)
-    print("empresa >>>", empresa)
-
-    if not empresa:
-        return render(request, "modulos/formulario.html", {
-            "error": "No hay empresa activa"
+    resultado = pregarga_modulo(request, modulo)
+    if resultado["estado"] is False:
+        return render(request, "modulos/moduloNuevo.html", {
+            "error": resultado["msg"]
         })
 
-    db = get_mongo_empresa(empresa)
-    print("db get_mongo_empresa >>>", db)
+    empresa = resultado["empresa"]
+    db = resultado["mongo"]
+    print("  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " )
 
-    #Modulo
-    # 🔹 Configuración del módulo
-    config = db.modulos.find_one({"_id": modulo, "activo": True})
-    print("config >>>", config)
-
-    if not config:
-        return render(request, "modulos/formulario.html", {
-            "error": "Módulo no existe"
-        })
-    
     #Modelo
     modelos = list(db.modelos.find({
             "modulo": modulo,
             "activo": True
         }))
     print(" modelos >>> " ,  modelos)
+    print("  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb " )
 
     if not modelos:
         return render(request, "modulos/formulario.html", {
@@ -509,162 +599,219 @@ def get_mysql_columns(cursor, table_name):
     return {row[0]: row for row in cursor.fetchall()}
 
 
-
-
 @login_required
 def cargar_formulario_consulta(request, modulo, id):
-    empresa = empresa_activa(request)
 
-    if not empresa:
-        return render(request, "modulos/consulta.html", {
-            "error": "No hay empresa activa"
+    resultado = pregarga_modulo(request, modulo)
+    if resultado["estado"] is False:
+        return render(request, "modulos/moduloNuevo.html", {
+            "error": resultado["msg"]
         })
 
-    # 🔹 Mongo (estructura)
-    mongo = get_mongo_empresa(empresa)
+    empresa = resultado["empresa"]
+    db = resultado["mongo"]
+    modulo_conf = resultado["modulo"]
 
-    config = mongo.modulos.find_one({"_id": modulo})
-    if not config:
-        return render(request, "modulos/consulta.html", {
-            "error": "Módulo no existe"
-        })
+    # ================= METADATA =================
+    Modelo = db.modelos.find_one({
+        "modulo": modulo_conf["_id"],
+        "rol": "cabecera",
+        "activo": True
+    })
 
-    Modelo = mongo.modelos.find_one({"modulo": config["_id"]})
-    if not Modelo:
-        return render(request, "modulos/consulta.html", {
-            "error": "Modelo no existe"
-        })
-        
-    campos_activos = Modelo["modelo"]["campos"]
-    tablaNombre = Modelo["modelo"]["entidad"]["tabla"]
-    FormClass = build_dynamic_form(campos_activos, empresa)
+    modelos_det = list(db.modelos.find({
+        "modulo": modulo_conf["_id"],
+        "rol": "detalle",
+        "activo": True
+    }))
 
-    # ======================
-    # 📌 POST
-    # ======================
-    if request.method == "POST":
-        form = FormClass(request.POST)
+    tabla_cab = Modelo["tabla"]
+    pk = Modelo["pk"]
+    campos_cab = [c for c in Modelo["campos"] if c.get("activo", True)]
 
-        if form.is_valid():
+    # ================= MYSQL =================
+    mysql = pymysql.connect(
+        host=empresa.sql_url,
+        user=empresa.sql_user,
+        password=empresa.sql_clave,
+        database=empresa.sql_db,
+        autocommit=False,
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
-            columnas = []
-            valores = []
+    cursor = mysql.cursor()
 
-            for campo in campos_activos:
-                nombre = campo["nombre"]
-                tipo = campo["tipo"]
+    try:
+        # =====================================================
+        # ======================= POST =======================
+        # =====================================================
+        if request.method == "POST":
 
-                if nombre not in form.cleaned_data:
-                    continue
+            accion = request.POST.get("accion")
 
-                valor = form.cleaned_data[nombre]
+            # ---------- DELETE ----------
+            if accion == "eliminar":
 
-                if valor in ("", None):
-                    continue
+                for det in modelos_det:
+                    sql = f"DELETE FROM {det['tabla']} WHERE {det['fk']} = %s"
+                    cursor.execute(sql, (id,))
 
-                if tipo == "fk":
-                    valor = valor.id
+                sql = f"DELETE FROM {tabla_cab} WHERE {pk} = %s"
+                cursor.execute(sql, (id,))
 
-                if tipo == "boolean":
-                    valor = 1 if valor else 0
-
-                columnas.append(nombre)
-                valores.append(valor)
-
-            mysql = pymysql.connect(
-                host=empresa.sql_url,
-                user=empresa.sql_user,
-                password=empresa.sql_clave,
-                database=empresa.sql_db,
-                charset="utf8mb4",
-                autocommit=False
-            )
-            try:
-                cursor = mysql.cursor()
-
-                if id > 0:
-                    set_sql = ", ".join([f"{c}=%s" for c in columnas])
-                    sql = f"""
-                        UPDATE {tablaNombre}
-                        SET {set_sql}
-                        WHERE id = %s
-                    """
-                    valores.append(id)
-                else:
-                    campos_sql = ", ".join(columnas)
-                    placeholders = ", ".join(["%s"] * len(valores))
-                    sql = f"""
-                        INSERT INTO {tablaNombre}
-                        ({campos_sql})
-                        VALUES ({placeholders})
-                    """
-
-                cursor.execute(sql, valores)
                 mysql.commit()
 
-            except Exception as e:
-                mysql.rollback()
-                raise e
+                return redirect(
+                    "modulo_form",
+                    modulo=modulo_conf["_id"]
+                )
 
-            finally:
-                mysql.close()
+            # ---------- UPDATE ----------
+            FormCab = build_dynamic_form(campos_cab, empresa)
+            form_cab = FormCab(request.POST)
 
-            return render(request, "modulos/consulta.html", {
-                "form": FormClass(),
-                "titulo": config["nombre"],
-                "modulo": modulo,
-                "success": "Registro guardado correctamente"
-            })
-    else:
-        if id >0:
-            # EDITAR / CONSULTAR REGISTRO EXISTENTE
-            mysql = pymysql.connect(
-                host=empresa.sql_url,
-                user=empresa.sql_user,
-                password=empresa.sql_clave,
-                database=empresa.sql_db,
-                cursorclass=pymysql.cursors.DictCursor
-            )
+            forms_detalle = []
+            for det in modelos_det:
+                FormDet = build_dynamic_form(det["campos"], empresa)
+                i = 0
+                while f"{det['tabla']}_{i}-" in "".join(request.POST.keys()):
+                    forms_detalle.append({
+                        "modelo": det,
+                        "form": FormDet(
+                            request.POST,
+                            prefix=f"{det['tabla']}_{i}"
+                        )
+                    })
+                    i += 1
 
-            cursor = mysql.cursor()
-
-            sql = f"SELECT * FROM {tablaNombre} WHERE id = %s"
-            cursor.execute(sql, (id,))
-            registro = cursor.fetchone()
-
-            cursor.close()
-            mysql.close()
-
-            if not registro:
-                return render(request, "modulos/consulta.html", {
-                    "error": "Registro no encontrado",
-                    "titulo": config["nombre"],
-                    "modulo": modulo
+            if not form_cab.is_valid() or any(not f["form"].is_valid() for f in forms_detalle):
+                return render(request, "modulos/moduloNuevo.html", {
+                    "form": form_cab,
+                    "formularios_detalle": formularios_detalle,
+                    "titulo": modulo_conf["nombre"],
+                    "modulo": modulo_conf,
+                    "id": id,
+                    "error": "Corrige los errores del formulario"
                 })
 
-            # Preparar datos iniciales del formulario
-            initial_data = {}
+            # ---- UPDATE CABECERA ----
+            sets = []
+            valores = []
 
-            for campo in campos_activos:
+            for campo in campos_cab:
                 nombre = campo["nombre"]
-                tipo = campo["tipo"]
+                if campo.get("editable", True):
+                    sets.append(f"{nombre} = %s")
+                    valores.append(form_cab.cleaned_data.get(nombre))
 
-                if nombre not in registro:
-                    continue
+            valores.append(id)
 
+            sql = f"""
+                UPDATE {tabla_cab}
+                SET {', '.join(sets)}
+                WHERE {pk} = %s
+            """
+
+            cursor.execute(sql, valores)
+
+            # ---- DELETE + INSERT DETALLES ----
+            for det in modelos_det:
+                sql = f"DELETE FROM {det['tabla']} WHERE {det['fk']} = %s"
+                cursor.execute(sql, (id,))
+
+            for f in forms_detalle:
+                modelo_det = f["modelo"]
+                fk = modelo_det["fk"]
+
+                campos = []
+                valores = []
+
+                for k, v in f["form"].cleaned_data.items():
+                    campos.append(k)
+                    valores.append(v)
+
+                campos.append(fk)
+                valores.append(id)
+
+                sql = f"""
+                    INSERT INTO {modelo_det['tabla']}
+                    ({','.join(campos)})
+                    VALUES ({','.join(['%s'] * len(valores))})
+                """
+                cursor.execute(sql, valores)
+
+            mysql.commit()
+
+            return redirect(
+                "modulo_form",
+                modulo=modulo_conf["_id"],
+                id=id
+            )
+
+        # =====================================================
+        # ======================= GET ========================
+        # =====================================================
+
+        sql = f"SELECT * FROM {tabla_cab} WHERE {pk} = %s"
+        cursor.execute(sql, (id,))
+        registro = cursor.fetchone()
+
+        if not registro:
+            return render(request, "modulos/consulta.html", {
+                "error": "Registro no encontrado",
+                "titulo": modulo_conf["nombre"],
+                "modulo": modulo_conf
+            })
+
+        FormCab = build_dynamic_form(campos_cab, empresa)
+
+        initial_cab = {}
+        for campo in campos_cab:
+            nombre = campo["nombre"]
+            if nombre in registro:
                 valor = registro[nombre]
-
-                # Ajustes por tipo
-                if tipo == "boolean":
+                if campo.get("tipo_funcional") == "boolean":
                     valor = bool(valor)
+                initial_cab[nombre] = valor
 
-                initial_data[nombre] = valor
-            form = FormClass(initial=initial_data)
-        else:
-            form = FormClass()
-  
-    return render(request, "modulos/consulta.html", {
-        "form": form,
-        "titulo": config["nombre"],
-        "modulo": modulo
+        form_cab = FormCab(initial=initial_cab)
+
+        formularios_detalle = []
+
+        for det in modelos_det:
+            sql = f"SELECT * FROM {det['tabla']} WHERE {det['fk']} = %s"
+            cursor.execute(sql, (id,))
+            rows = cursor.fetchall() or []
+
+            FormDet = build_dynamic_form(det["campos"], empresa)
+            forms = []
+
+            for i, row in enumerate(rows):
+                forms.append(
+                    FormDet(initial=row, prefix=f"{det['tabla']}_{i}")
+                )
+
+            if not forms:
+                forms.append(FormDet(prefix=f"{det['tabla']}_0"))
+
+            formularios_detalle.append({
+                "entidad": det["tabla"],
+                "forms": forms
+            })
+
+    except Exception as e:
+        mysql.rollback()
+        raise e
+
+    finally:
+        cursor.close()
+        mysql.close()
+
+    return render(request, "modulos/moduloNuevo.html", {
+        "form": form_cab,
+        "formularios_detalle": formularios_detalle,
+        "titulo": modulo_conf["nombre"],
+        "moduloId": modulo_conf["_id"],
+        "modulo": modulo_conf,
+        "id": id
     })

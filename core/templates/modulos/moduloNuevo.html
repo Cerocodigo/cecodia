@@ -58,10 +58,11 @@
 
 
             <li class="nav-item">
-                <a class="nav-link collapsed" aria-expanded="true" href="/modulo/{{ m.id }}/nuevo" target="_blank" rel="noopener noreferrer">
+               <!--  <a class="nav-link collapsed" aria-expanded="true" href="/modulo/{{ m.id }}/nuevo" target="_blank" rel="noopener noreferrer">
                     <i class="fas fa-fw fa-cog"></i>
                     <span>grabar</span>
-                </a>
+                </a> -->
+             
             </li>
 
 
@@ -283,11 +284,31 @@
 
                             <form method="post">
                                 {% csrf_token %}
-                              
-                                <button type="submit" class="btn btn-primary">
-                                    Guardar
-                                </button>
-                              
+
+                                <div class="d-flex gap-2 mb-3">
+                                    {% if id %}
+                                    <a href="/modulo/{{moduloId}}/nuevo"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="btn btn-primary">
+                                        Nuevo
+                                    </a>
+                                    {% endif %}
+                                
+                                    <button type="submit" name="accion" value="guardar" class="btn btn-primary">
+                                        Guardar
+                                    </button>
+                                
+                                    {% if id %}
+                                    <button type="submit"
+                                            name="accion"
+                                            value="eliminar"
+                                            class="btn btn-danger"
+                                            onclick="return confirm('¿Eliminar registro?')">
+                                        Eliminar
+                                    </button>
+                                    {% endif %}
+                                </div>
                                 <div class="row">
                               
                                   <!-- ===================== -->
@@ -521,6 +542,31 @@
     });
     </script>
 
+<script>
+    document.addEventListener('change', function (e) {
+      if (!e.target.matches('select')) return;
+    
+      const opt = e.target.options[e.target.selectedIndex];
+      if (!opt) return;
+    
+      document
+        .querySelectorAll('[data-ref-from="'+ e.target.id +'"]')
+        .forEach(el => {
+          const key = el.dataset.refKey;
+          el.value = opt.dataset[key] || '';
+        });
+    });
+    
+    // 🔥 DISPARAR AL INICIO
+    document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('select[data-ref-source]').forEach(select => {
+        console.log('Inicializando:', select.id);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    });
+    </script>
 </body>
 
 </html>

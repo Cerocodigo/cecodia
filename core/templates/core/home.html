@@ -78,7 +78,7 @@
             {% for m in modulos %}
             {% if m.uso == 'medio' %}
             <li class="nav-item">
-                <a class="nav-link collapsed" aria-expanded="true">
+                <a class="nav-link collapsed" aria-expanded="true" href="/modulo/{{ m.id }}/main" target="_blank" rel="noopener noreferrer">
                     <i class="fas fa-fw fa-cog"></i>
                     <span>{{ m.nombre }}</span>
                 </a>
@@ -100,8 +100,10 @@
                         {% for m in modulos %}
                         {%if m.uso == 'bajo'%}
 
-                            <a class="collapse-item" href="login.html">{{ m.nombre }}</a>
-
+                            <a class="collapse-item" aria-expanded="true" href="/modulo/{{ m.id }}/main" target="_blank" rel="noopener noreferrer">
+                                <i class="fas fa-fw fa-cog"></i>
+                                <span>{{ m.nombre }}</span>
+                            </a>
          
                         {% endif %}
                         {% empty %}
