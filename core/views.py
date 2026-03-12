@@ -1,5 +1,6 @@
 
 import pymysql
+import json
 
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -10,6 +11,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, connection
 from django.urls import reverse
+from django.http import JsonResponse
+
 
 from datetime import datetime
 
@@ -26,11 +29,351 @@ from motor.mongo import get_mongo_empresa, mongo_field_to_sql  # ✅ IMPORT FALT
 from core.ia import interpretar_prompt
 
 
+import os
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
+from datetime import datetime
+
 class HomeView(LoginRequiredMixin, TemplateView):
     template_name = "core/home.html"
 
+@login_required
+def subir_archivo(request):
+
+    if request.method == "POST":
+
+        archivo = request.FILES.get("archivo")
+        empresa = request.POST.get("empresa")
+
+        carpeta = os.path.join(settings.MEDIA_ROOT, "uploads", empresa)
+
+        if not os.path.exists(carpeta):
+            os.makedirs(carpeta)
+
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        nombre = f"{timestamp}_{archivo.name}"
+
+        ruta = os.path.join(carpeta, nombre)
+
+        with open(ruta, "wb+") as destino:
+            for chunk in archivo.chunks():
+                destino.write(chunk)
+
+        ruta_db = f"uploads/{empresa}/{nombre}"
+
+        return JsonResponse({
+            "estado": True,
+            "ruta": ruta_db,
+            "url": settings.MEDIA_URL + ruta_db
+        })
+    return JsonResponse({"estado": False})
 
 @login_required
+def calculosReferenciaBuscador(request, modelo, campo):
+    print("calculosCampos - calculosReferenciaBuscador")
+
+    empresa = empresa_activa(request)
+    if not empresa:
+        return JsonResponse({"estado": False, "msg": "empresa no existe"})
+
+    db = get_mongo_empresa(empresa)
+
+    # 1️⃣ Buscar modelo
+    modelo_conf = db.modelos.find_one({"_id": modelo})
+    print("modelo_conf >>>", modelo_conf)
+
+    if not modelo_conf:
+        return JsonResponse({"estado": False, "msg": "modelo no encontrado"})
+
+    # 2️⃣ Buscar campo
+    campo_conf = next(
+        (c for c in modelo_conf.get("campos", []) if c.get("nombre") == campo),
+        None
+    )
+    print("campo_conf >>>", campo_conf)
+
+    if not campo_conf:
+        return JsonResponse({"estado": False, "msg": "campo no existe en el modelo"})
+
+    # 3️⃣ Verificar tipo funcional
+    if campo_conf.get("tipo_funcional") != "ReferenciaBuscador":
+        return JsonResponse({
+            "estado": True,
+            "msg": "campo no es ReferenciaBuscador",
+            "valor": None
+        })
+
+    print('Analisis ReferenciaBuscador')
+    config = campo_conf.get("configuracion", {})
+    print("config >>>", config)
+    sql_template = config.get("sql")
+    if len(request.body) >0:
+        variables_valores =  json.loads(request.body.decode("utf-8"))
+        variables_conf =  config.get("parametros")
+    else:
+        variables_valores= []
+        variables_conf =  None
+
+    
+    print('sql_template >>>>' , sql_template)
+    
+    print('variables_conf >>>>' , variables_conf)
+
+
+    if not sql_template:
+        return JsonResponse({
+            "estado": False,
+            "msg": "SQL no definido en configuración"
+        })
+
+    # 4️⃣ Resolver variables
+    sql = sql_template
+
+    if variables_conf:
+        # formato soportado: "@Var@=CampoFormulario"
+        pares = variables_conf.split(",")
+        for par in pares:
+            print('par >>>', par)
+            var_sql, campo_origen = par.split("=")
+            valor = variables_valores[campo_origen]
+            print("valor >>>", valor)
+            if valor is None:
+                return JsonResponse({
+                    "estado": False,
+                    "msg": f"valor no enviado para {campo_origen}"
+                })
+
+            sql = sql.replace(var_sql, str(valor))
+            
+
+    q = request.GET.get("q")
+    qq = ' and ('
+    
+    Campos_filtros = config.get("campos_filtrables")
+    if len(q)>0:
+        for campo in Campos_filtros:
+            qq = qq + '' + campo+ ' like "%' + q + '%" or ' 
+        qq = qq[:-3] + ')'
+        sql = sql + qq
+
+    print("Ejecutar SQL >>>", sql)
+
+    # 5️⃣ Ejecutar SQL
+    try:
+        conn = pymysql.connect(
+            host=empresa.sql_url,
+            user=empresa.sql_user,
+            password=empresa.sql_clave,
+            database=empresa.sql_db,
+            charset="utf8mb4",
+            cursorclass=pymysql.cursors.DictCursor
+        )
+
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+        conn.close()
+
+        return JsonResponse({
+            "estado": True,
+            "resultados": rows,
+            "Campos_filtros":Campos_filtros
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "estado": False,
+            "msg": "Error ejecutando SQL",
+            "error": str(e)
+        })
+
+
+
+@login_required
+def calculosQueryBaseDatos(request, modelo, campo):
+    print("calculosCampos - QueryBaseDatos")
+
+    empresa = empresa_activa(request)
+    if not empresa:
+        return JsonResponse({"estado": False, "msg": "empresa no existe"})
+
+    db = get_mongo_empresa(empresa)
+
+    # 1️⃣ Buscar modelo
+    modelo_conf = db.modelos.find_one({"_id": modelo})
+    print("modelo_conf >>>", modelo_conf)
+
+    if not modelo_conf:
+        return JsonResponse({"estado": False, "msg": "modelo no encontrado"})
+
+    # 2️⃣ Buscar campo
+    campo_conf = next(
+        (c for c in modelo_conf.get("campos", []) if c.get("nombre") == campo),
+        None
+    )
+    print("campo_conf >>>", campo_conf)
+
+    if not campo_conf:
+        return JsonResponse({"estado": False, "msg": "campo no existe en el modelo"})
+
+    # 3️⃣ Verificar tipo funcional
+    if campo_conf.get("tipo_funcional") != "QueryBaseDatos":
+        return JsonResponse({
+            "estado": True,
+            "msg": "campo no es QueryBaseDatos",
+            "valor": None
+        })
+
+    print('Analisis')
+    config = campo_conf.get("configuracion", {})
+    print("config >>>", config)
+    sql_template = config.get("query")['sql']
+    variables_valores =  json.loads(request.body.decode("utf-8"))
+    variables_conf =  config.get("parametros")
+
+    
+    print('sql_template >>>>' , sql_template)
+    
+    print('variables_conf >>>>' , variables_conf)
+
+
+    if not sql_template:
+        return JsonResponse({
+            "estado": False,
+            "msg": "SQL no definido en configuración"
+        })
+
+    # 4️⃣ Resolver variables
+    sql = sql_template
+
+    if variables_conf:
+        # formato soportado: "@Var@=CampoFormulario"
+        pares = variables_conf.split(",")
+        for par in pares:
+            print('par >>>', par)
+            var_sql, campo_origen = par.split("=")
+            valor = variables_valores[campo_origen]
+            print("valor >>>", valor)
+            if valor is None:
+                return JsonResponse({
+                    "estado": False,
+                    "msg": f"valor no enviado para {campo_origen}"
+                })
+
+            sql = sql.replace(var_sql, str(valor))
+
+    print("SQL >>>", sql)
+
+    # 5️⃣ Ejecutar SQL
+    try:
+        conn = pymysql.connect(
+            host=empresa.sql_url,
+            user=empresa.sql_user,
+            password=empresa.sql_clave,
+            database=empresa.sql_db,
+            charset="utf8mb4",
+            cursorclass=pymysql.cursors.DictCursor
+        )
+
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            row = cursor.fetchone()
+
+        conn.close()
+
+        valor = list(row.values())[0] if row else None
+
+        return JsonResponse({
+            "estado": True,
+            "tipo": "QueryBaseDatos",
+            "campo": campo,
+            "valor": valor
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "estado": False,
+            "msg": "Error ejecutando SQL",
+            "error": str(e)
+        })
+
+
+
+@login_required
+def calculosCampos(request, modelo, campo):
+    empresa = empresa_activa(request)
+    if not empresa:
+        return JsonResponse({"estado": False, "msg": "empresa no existe"})
+
+    db = get_mongo_empresa(empresa)
+
+    # 1️⃣ Buscar modelo
+    modelo_conf = db.modelos.find_one({"_id": modelo})
+    
+    if not modelo_conf:
+        return JsonResponse({"estado": False, "msg": "modelo no encontrado"})
+
+    # 2️⃣ Buscar campo dentro del modelo
+    campo_conf = next(
+        (c for c in modelo_conf.get("campos", []) if c.get("nombre") == campo),
+        None
+    )
+
+    if not campo_conf:
+        return JsonResponse({"estado": False, "msg": "campo no existe en el modelo"})
+
+    # 3️⃣ Verificar tipo
+    if campo_conf.get("tipo_funcional") != "NumeroSecuencial":
+        return JsonResponse({
+            "estado": True,
+            "msg": "campo no es secuencial",
+            "valor": None
+        })
+
+    campo = campo_conf.get("nombre")
+    tabla = modelo_conf.get("tabla")
+    sql = f"""
+        SELECT COALESCE(MAX({campo}), 0) AS actual
+        FROM {tabla}
+    """
+    try:
+        conn = pymysql.connect(
+            host=empresa.sql_url,
+            user=empresa.sql_user,
+            password=empresa.sql_clave,
+            database=empresa.sql_db,
+            charset="utf8mb4",
+            cursorclass=pymysql.cursors.DictCursor
+        )
+
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            row = cursor.fetchone()
+
+        conn.close()
+
+        actual = row["actual"] if row and row["actual"] is not None else 0
+        siguiente = actual + 1
+
+        return JsonResponse({
+            "estado": True,
+            "tipo": "NumeroSecuencial",
+            "campo": campo,
+            "tabla": tabla,
+            "actual": actual,
+            "siguiente": siguiente
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "estado": False,
+            "msg": "Error ejecutando SQL",
+            "error": str(e)
+        })
+
+
+
 def home(request):
     empresa = empresa_activa(request)
     print("empresa >>>", empresa)
@@ -147,13 +490,15 @@ def cargar_modulo_nuevo(request, modulo):
     #filtro
     if request.method == "POST":
         # === CABECERA ===
-        FormCabecera = build_dynamic_form(modelo_cab["campos"], empresa)
+        FormCabecera = build_dynamic_form(modelo_cab["campos"], empresa, modelo_cab["_id"])
         form_cab = FormCabecera(request.POST)
 
         # === DETALLES ===
+
+
         forms_detalle = []
         for det in modelos_det:
-            FormDet = build_dynamic_form(det["campos"], empresa)
+            FormDet = build_dynamic_form(det["campos"], empresa, det["_id"])
             form_det = FormDet(request.POST, prefix=str(det["_id"]))
             forms_detalle.append({
                 "modelo": det,
@@ -166,6 +511,8 @@ def cargar_modulo_nuevo(request, modulo):
                 "form": form_cab,
                 "formularios_detalle": [
                     {
+                        "id": f["modelo"]["_id"],
+                        "display": f["modelo"]["display"],
                         "entidad": f["modelo"]["tabla"],
                         "form": f["form"]
                     } for f in forms_detalle
@@ -247,7 +594,7 @@ def cargar_modulo_nuevo(request, modulo):
         )
     
     if request.method == "GET":
-        FormCabecera = build_dynamic_form(modelo_cab["campos"], empresa)
+        FormCabecera = build_dynamic_form(modelo_cab["campos"], empresa, modelo_cab["_id"])
 
         FormsDetalle = []
         for i, det in enumerate(modelos_det):
@@ -255,7 +602,8 @@ def cargar_modulo_nuevo(request, modulo):
             FormsDetalle.append({
                 "modelo_id": det["_id"],
                 "entidad": det["tabla"],
-                "form": build_dynamic_form(campos, empresa)
+                "display": det["display"],
+                "form": build_dynamic_form(campos, empresa, det["_id"])
             })
 
 
@@ -263,7 +611,9 @@ def cargar_modulo_nuevo(request, modulo):
             "form": FormCabecera(),
             "formularios_detalle": [
             {
+                "modelo_id": f["modelo_id"],
                 "entidad": f["entidad"],
+                "display": f["display"],
                 "form": f["form"]()
             } for f in FormsDetalle
         ],
@@ -293,7 +643,6 @@ def cargar_modulo_main(request, modulo):
     #Modelo
     Modelos = list(db.modelos.find({"modulo": modulo['_id']}))
 
-    print("Modelos >>>", Modelos)
 
     modelo_cab = None
     modelos_det = []
@@ -332,9 +681,7 @@ def cargar_modulo_main(request, modulo):
 
 @login_required
 def cargar_formulario_modulo(request, modulo):
-    print("modulo >>>", modulo)
     empresa = empresa_activa(request)
-    print("empresa >>>", empresa)
 
     if not empresa:
         return render(request, "modulos/moduloMenu.html", {
@@ -342,11 +689,7 @@ def cargar_formulario_modulo(request, modulo):
         })
 
     db = get_mongo_empresa(empresa)
-    print("db get_mongo_empresa >>>", db)
-
-    #Modulo
     config = db.modulos.find_one({"_id": modulo})
-    print("config >>>", config)
 
     if not config:
         return render(request, "modulos/moduloMenu.html", {
@@ -357,7 +700,6 @@ def cargar_formulario_modulo(request, modulo):
     #Modelo = db.modelos.find_one({"modulo": config['_id']})
     Modelos = list(db.modelos.find({"modulo": config['_id']}))
 
-    print("Modelos >>>", Modelos)
 
     modelo_cab = None
     modelos_det = []
@@ -383,12 +725,10 @@ def cargar_formulario_modulo(request, modulo):
     if prompt:
         # 🔮 FUTURO: aquí se enviará a IA
         modeloIA_cab = interpretar_prompt(prompt, modelo_cab["campos"])
-        print("modeloIA >>" , modeloIA_cab)
         if modelosIA_det != None:
             modelosIA_det = interpretar_prompt(prompt, modelos_det[0]["campos"])
-            print("modeloIA_cab >>" , modelosIA_det)
 
-    FormCabecera = build_dynamic_form(modeloIA_cab if modeloIA_cab else modelo_cab["campos"], empresa)
+    FormCabecera = build_dynamic_form(modeloIA_cab if modeloIA_cab else modelo_cab["campos"], empresa, modelo_cab["_id"])
 
     FormsDetalle = []
     for i, det in enumerate(modelos_det):
@@ -396,11 +736,10 @@ def cargar_formulario_modulo(request, modulo):
         FormsDetalle.append({
             "modelo_id": det["_id"],
             "entidad": det["tabla"],
-            "form": build_dynamic_form(campos, empresa)
+            "form": build_dynamic_form(campos, empresa, det["_id"])
         })
 
-    print("FormCabecera >>>", FormCabecera)
-    print("FormsDetalle >>>", FormsDetalle)
+
 
     if request.method == "POST":
 
@@ -448,7 +787,6 @@ def cargar_formulario_modulo(request, modulo):
 
 @login_required
 def actualiazarBd(request, modulo):
-    print(" modulo >>> " ,  modulo)
 
     resultado = pregarga_modulo(request, modulo)
     if resultado["estado"] is False:
@@ -458,15 +796,13 @@ def actualiazarBd(request, modulo):
 
     empresa = resultado["empresa"]
     db = resultado["mongo"]
-    print("  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " )
 
     #Modelo
     modelos = list(db.modelos.find({
             "modulo": modulo,
             "activo": True
         }))
-    print(" modelos >>> " ,  modelos)
-    print("  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb " )
+
 
     if not modelos:
         return render(request, "modulos/formulario.html", {
@@ -503,11 +839,9 @@ def actualiazarBd(request, modulo):
         # =========================
         # 🔹 SINCRONIZAR CABECERA
         # =========================
-        print("sincro tabla")
         tabla_cab = cabecera["tabla"]
         campos_cab = cabecera["campos"]
 
-        print("🔷 Cabecera:", tabla_cab)
         sincronizar_tabla(cursor, mysql, tabla_cab, campos_cab)
         # =========================
         # 🔹 SINCRONIZAR DETALLES
@@ -515,8 +849,6 @@ def actualiazarBd(request, modulo):
         for det in detalles:
             tabla_det = det["tabla"]
             campos_det = det["campos"]
-
-            print("🔷 Detalle:", tabla_det)
             sincronizar_tabla(cursor, mysql, tabla_det, campos_det)
 
         mysql.commit()
@@ -628,6 +960,7 @@ def cargar_formulario_consulta(request, modulo, id):
     tabla_cab = Modelo["tabla"]
     pk = Modelo["pk"]
     campos_cab = [c for c in Modelo["campos"] if c.get("activo", True)]
+    cab_id = Modelo["_id"]
 
     # ================= MYSQL =================
     mysql = pymysql.connect(
@@ -667,12 +1000,12 @@ def cargar_formulario_consulta(request, modulo, id):
                 )
 
             # ---------- UPDATE ----------
-            FormCab = build_dynamic_form(campos_cab, empresa)
+            FormCab = build_dynamic_form(campos_cab, empresa, cab_id)
             form_cab = FormCab(request.POST)
 
             forms_detalle = []
             for det in modelos_det:
-                FormDet = build_dynamic_form(det["campos"], empresa)
+                FormDet = build_dynamic_form(det["campos"], empresa, det["_id"])
                 i = 0
                 while f"{det['tabla']}_{i}-" in "".join(request.POST.keys()):
                     forms_detalle.append({
@@ -763,7 +1096,7 @@ def cargar_formulario_consulta(request, modulo, id):
                 "modulo": modulo_conf
             })
 
-        FormCab = build_dynamic_form(campos_cab, empresa)
+        FormCab = build_dynamic_form(campos_cab, empresa, cab_id)
 
         initial_cab = {}
         for campo in campos_cab:
@@ -783,7 +1116,7 @@ def cargar_formulario_consulta(request, modulo, id):
             cursor.execute(sql, (id,))
             rows = cursor.fetchall() or []
 
-            FormDet = build_dynamic_form(det["campos"], empresa)
+            FormDet = build_dynamic_form(det["campos"], empresa, det['_id'])
             forms = []
 
             for i, row in enumerate(rows):
